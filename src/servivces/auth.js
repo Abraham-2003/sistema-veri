@@ -1,4 +1,4 @@
-import { db } from '@/firebase/config'
+import { db } from '../firebase/config.js'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
 export async function login(correo, password) {
@@ -14,3 +14,5 @@ export async function login(correo, password) {
     throw new Error('Credenciales inválidas')
   }
 }
+
+export { db }
