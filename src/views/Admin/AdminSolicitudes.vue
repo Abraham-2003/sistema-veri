@@ -15,7 +15,7 @@
       <thead class="table-dark">
         <tr>
           <th>Tipo</th>
-          <th>Proveedor</th>
+          <th>Proveedor o Laboratorio</th>
           <th>Fecha de Solicitud</th>
           <th>Fecha de Pago</th>
           <th>Fecha de Entrega</th>

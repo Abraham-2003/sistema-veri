@@ -1,11 +1,22 @@
 <template>
   <div :class="['admin-layout', { 'con-sidebar': mostrarSidebar }]">
-    <button 
-      class="btn btn-outline-dark position-fixed top-0 start-0 m-2 z-3"
+  <button
+      class="btn btn-outline-ligth position-fixed top-0 start-0 m-2 z-3"
       @click="mostrarSidebar = true"
     >
       ☰
     </button>
+    <nav class="navbar justify-content-center shadow-sm" >
+      <img
+        src="../../assets/pwa-512x512.png"
+        alt="Logo"
+        height="40"
+        class="d-inline-block align-middle"
+      />
+      
+    </nav>
+
+    
 
     <SidebarGerente :visible="mostrarSidebar" @close="mostrarSidebar = false" />
 
@@ -15,26 +26,28 @@
   </div>
 </template>
 
-
 <script setup>
-import { ref } from 'vue'
-import SidebarGerente from './GerenteSidebar.vue'
-import { watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref } from "vue";
+import SidebarGerente from "./GerenteSidebar.vue";
+import { watch } from "vue";
+import { useRoute } from "vue-router";
 
-const route = useRoute()
+const route = useRoute();
 
-watch(() => route.fullPath, () => {
-  mostrarSidebar.value = false
-})
+watch(
+  () => route.fullPath,
+  () => {
+    mostrarSidebar.value = false;
+  }
+);
 
-
-const mostrarSidebar = ref(false)
+const mostrarSidebar = ref(false);
 </script>
 
 <style scoped>
 .admin-layout {
-  transition: margin-left 0.3s ease;
+  background-color: #f2f2f2;
+  min-height: 100vh;
 }
 
 .admin-layout .contenido {
@@ -42,8 +55,5 @@ const mostrarSidebar = ref(false)
   transition: margin-left 0.3s ease;
 }
 
-.admin-layout.con-sidebar .contenido {
-  margin-left: 250px; /* mismo ancho que el sidebar */
-}
 
 </style>

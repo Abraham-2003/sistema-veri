@@ -5,7 +5,7 @@
     <!-- Sección 1: Datos iniciales -->
     <div class="card mb-3 shadow-sm">
       <div class="card-body">
-        <h6 class="card-title">📝 Datos de la solicitud</h6>
+        <h6 class="card-title">Datos de la solicitud</h6>
 
         <div class="mb-3">
           <label class="form-label">Tipo</label>
@@ -18,12 +18,21 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Proveedor</label>
+          <label class="form-label">Proveedor o Laboratorio</label>
           <select v-model="solicitud.proveedor" class="form-select">
-            <option disabled value="">Selecciona un proveedor</option>
-            <option v-for="p in proveedores" :key="p.id" :value="p.nombre">
-              {{ p.nombre }}
-            </option>
+            <option disabled value="">Selecciona proveedor o laboratorio</option>
+
+            <optgroup label="Proveedores">
+              <option v-for="p in proveedores" :key="p.id" :value="p.nombre">
+                {{ p.nombre }}
+              </option>
+            </optgroup>
+
+            <optgroup label="Laboratorios">
+              <option v-for="l in laboratorios" :key="l.id" :value="l.nombre">
+                {{ l.nombre }}
+              </option>
+            </optgroup>
           </select>
         </div>
 
@@ -37,7 +46,7 @@
     <!-- Sección 2: Fecha de pago -->
     <div class="card mb-3 shadow-sm">
       <div class="card-body">
-        <h6 class="card-title">💳 Información de pago</h6>
+        <h6 class="card-title">Información de pago</h6>
 
         <div class="mb-3">
           <label class="form-label">Fecha de Pago</label>
@@ -49,7 +58,7 @@
     <!-- Sección 3: Fecha de entrega -->
     <div class="card mb-3 shadow-sm">
       <div class="card-body">
-        <h6 class="card-title">📦 Información de entrega</h6>
+        <h6 class="card-title">Información de entrega</h6>
 
         <div class="mb-3">
           <label class="form-label">Fecha de Entrega</label>
@@ -61,7 +70,7 @@
     <!-- Sección 4: Observaciones -->
     <div class="card mb-3 shadow-sm">
       <div class="card-body">
-        <h6 class="card-title">🗒️ Observaciones</h6>
+        <h6 class="card-title">Observaciones</h6>
 
         <textarea
           v-model="solicitud.observaciones"
@@ -80,24 +89,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { collection, getDocs, addDoc, getFirestore } from 'firebase/firestore'
+import { ref, onMounted } from "vue";
+import { collection, getDocs, addDoc, getFirestore } from "firebase/firestore";
 
-const proveedores = ref([])
+const proveedores = ref([]);
+const laboratorios = ref([])
 
-const cargarProveedores = async () => {
+const cargarLaboratorios = async () => {
   try {
-    const snapshot = await getDocs(collection(db, 'proveedores'))
-    proveedores.value = snapshot.docs.map(doc => ({
+    const snapshot = await getDocs(collection(db, "laboratorios"))
+    laboratorios.value = snapshot.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
     }))
-    console.log('[✅ Proveedores cargados]', proveedores.value)
+    console.log("[✅ Laboratorios cargados]", laboratorios.value)
   } catch (err) {
-    console.error('[❌ Error al cargar proveedores]', err)
+    console.error("[❌ Error al cargar laboratorios]", err)
   }
 }
 
+const cargarProveedores = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "proveedores"));
+    proveedores.value = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    console.log("[✅ Proveedores cargados]", proveedores.value);
+  } catch (err) {
+    console.error("[❌ Error al cargar proveedores]", err);
+  }
+};
 
 const db = getFirestore();
 const solicitud = ref({
@@ -133,8 +155,7 @@ const guardarSolicitud = async () => {
   }
 };
 onMounted(() => {
-  cargarProveedores()
-  // también puedes cargar datos del usuario o solicitud temporal aquí
-})
-
+  cargarProveedores();
+  cargarLaboratorios()
+});
 </script>

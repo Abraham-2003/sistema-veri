@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h6 class="text-center mb-3 text-success">📶 Funcionamiento de líneas</h6>
+    <h6 class="text-center mb-3 text-success">Funcionamiento de líneas</h6>
 
     <div v-for="(linea, index) in lineas" :key="index" class="card mb-3 shadow-sm">
       <div class="card-body">

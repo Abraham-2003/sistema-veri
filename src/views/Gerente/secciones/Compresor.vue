@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h6 class="text-center mb-3 text-success">⚙️ Compresor</h6>
+    <h6 class="text-center mb-3 text-success">Compresor</h6>
 
     <div class="card shadow-sm">
       <div class="card-body">

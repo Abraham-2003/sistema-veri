@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Sistema Veri',
+        name: 'Gestiond de Vereficentros',
         short_name: 'Veri',
         description: 'Sistema de reportes para centros de verificación',
         theme_color: '#198754',
@@ -22,7 +22,7 @@ export default defineConfig({
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'pwa-iconoapp.webp',
             sizes: '512x512',
             type: 'image/png'
           },

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h6 class="text-center mb-3 text-success">🧪 Gases</h6>
+    <h6 class="text-center mb-3 text-success">Gases</h6>
 
     <!-- Gases en uso -->
     <div class="card mb-3 shadow-sm">

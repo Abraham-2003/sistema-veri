@@ -16,7 +16,7 @@
           <div class="card text-white bg-success mb-3">
             <div class="card-body">
               <h5 class="card-title">Reportes Hoy</h5>
-              <p class="card-text display-6">0</p>
+              <p class="card-text display-6">{{ reportesHoy }}</p>
             </div>
           </div>
         </div>
@@ -54,8 +54,19 @@
 </template>
 <script>
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
+import dayjs from 'dayjs'
 
 const db = getFirestore()
+
+async function obtenerReportesHoy() {
+  const hoy = dayjs().format('YYYY-MM-DD')
+  const q = query(collection(db, 'reportes'), where('fecha', '==', hoy))
+  const snapshot = await getDocs(q)
+  return snapshot.size
+}
+
+
+
 
 async function obtenerCentrosActivos() {
   const q = query(collection(db, 'centros'), where('estatus', '==', 'Activo'))
@@ -75,11 +86,13 @@ export default {
       user: JSON.parse(localStorage.getItem("user")) || {},
       centrosActivos: 0,
       solicitudesActivas: 0,
+      reportesHoy: 0,
     };
   },
   async mounted() {
     this.centrosActivos = await obtenerCentrosActivos();
     this.solicitudesActivas = await obtenerSolicitudesActivas();
+    this.reportesHoy = await obtenerReportesHoy();
   },
 };
 </script>
