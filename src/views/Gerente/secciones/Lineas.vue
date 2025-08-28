@@ -11,7 +11,7 @@
           <select v-model="datosLineas[linea].estado" class="form-select">
             <option disabled value="">Selecciona estado</option>
             <option value="Operativa">Operativa</option>
-            <option value="Con falla">Con falla</option>
+            <option value="Apagada">Apagada</option>
             <option value="Fuera de servicio">Fuera de servicio</option>
           </select>
         </div>
@@ -19,11 +19,6 @@
         <div class="mb-3">
           <label class="form-label">Reporte de falla</label>
           <input v-model="datosLineas[linea].reporteFalla" type="text" class="form-control" placeholder="Ej. Falla en sensor de opacidad" />
-        </div>
-
-        <div class="form-check mb-3">
-          <input v-model="datosLineas[linea].dual" class="form-check-input" type="checkbox" :id="`dual-${linea}`" />
-          <label class="form-check-label" :for="`dual-${linea}`">¿Es línea dual?</label>
         </div>
 
         <div class="mb-3">

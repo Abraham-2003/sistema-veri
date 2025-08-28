@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex flex-column  text-white vh-100 p-3" style="width: 250px; background: linear-gradient(135deg, #1f2d3d 0%, #586d82 100%);">
+  <div class="d-flex flex-column  text-white vh-100 p-3" style="width: 250px; background: linear-gradient(135deg, #1f2d3d 0%, #198754 100%);">
     <!-- Perfil -->
     <div class="text-center mb-4">
       <img
@@ -15,50 +15,32 @@
     <!-- Navegación -->
     <nav class="flex-grow-1">
       <router-link
-        to="/Administrador"
+        to="/Coordinador"
         class="nav-link text-white py-2 px-3 rounded mb-1"
         
       >
         Inicio
       </router-link>
 
-      <!-- Gestión Dropdown -->
       <div class="gestion-dropdown mb-1">
         <button
           class="btn text-white w-100 text-start d-flex justify-content-between align-items-center"
           @click="showGestion = !showGestion"
           
         >
-          ⚙️ Gestión
+          Gestión
           <span :class="{ 'rotate': showGestion }">▾</span>
         </button>
         <div v-show="showGestion" class="submenu mt-1">
-          <router-link class="dropdown-item" to="/Administrador/Gestion" active-class="bg-secondary">Usuarios</router-link>
-          <router-link class="dropdown-item" to="/Administrador/Gestion Centros" active-class="bg-secondary">Centros</router-link>
-          <router-link class="dropdown-item" to="/Administrador/Gestion Lab" active-class="bg-secondary">Laboratorios</router-link>
-          <router-link class="dropdown-item" to="/Administrador/Gestion Provedores" active-class="bg-secondary">Proveedores</router-link>
+          <router-link class="dropdown-item" to="/Coordinador/Usuarios" active-class="bg-secondary">Usuarios</router-link>
+          <router-link class="dropdown-item" to="/Coordinador/Gestion Centros" active-class="bg-secondary">Centros</router-link>
+          <router-link class="dropdown-item" to="/Coordinador/Gestion Lab" active-class="bg-secondary">Laboratorios</router-link>
+          <router-link class="dropdown-item" to="/Coordinador/Gestion Provedores" active-class="bg-secondary">Proveedores</router-link>
         </div>
       </div>
 
-      <!-- Otras opciones -->
       <router-link
-        to="/Administrador/Reportes"
-        class="nav-link text-white py-2 px-3 rounded mb-1"
-        active-class="bg-secondary"
-      >
-        Reportes
-      </router-link>
-
-      <router-link
-        to="/Administrador/ReportesLab"
-        class="nav-link text-white py-2 px-3 rounded mb-1"
-        active-class="bg-secondary"
-      >
-        Reportes Laboratorios
-      </router-link>
-
-      <router-link
-        to="/Administrador/Solicitudes"
+        to="/Coordinador/Solicitudes"
         class="nav-link text-white py-2 px-3 rounded mb-1"
         active-class="bg-secondary"
       >
@@ -66,7 +48,7 @@
       </router-link>
 
       <router-link
-        to="/Administrador/Infraestructura"
+        to="/Coordinador/Infraestructura"
         class="nav-link text-white py-2 px-3 rounded mb-1"
         active-class="bg-secondary"
       >
@@ -99,9 +81,9 @@ onMounted(() => {
   if (storedUser) {
     user.value = storedUser
 
-    if (storedUser.rol === 'Administrador') {
+    if (storedUser.rol === 'Coordinador') {
       stopSolicitudes = listenToSolicitudes()
-      console.log('Listeners activados para administrador')
+      console.log('Listeners activados para Coordinador')
     } else {
       console.log('Usuario sin permisos para listeners')
     }

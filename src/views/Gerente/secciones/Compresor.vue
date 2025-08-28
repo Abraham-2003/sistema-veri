@@ -6,12 +6,24 @@
       <div class="card-body">
         <div class="mb-3">
           <label class="form-label">Serie</label>
-          <input v-model="compresor.serie" type="text" class="form-control" placeholder="Ej. CMP-2023-001" />
+          <input
+            v-model="compresor.serie"
+            type="text"
+            class="form-control"
+            placeholder="Ej. CMP-2023-001"
+          />
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Nivel de aceite</label>
-          <input v-model="compresor.nivelAceite" type="text" class="form-control" placeholder="Ej. Óptimo / Bajo / Alto" />
+          <label class="form-label">Nivel de aceite (%)</label>
+          <input
+            v-model="compresor.nivelAceite"
+            type="number"
+            class="form-control"
+            placeholder="Ej. 75"
+            min="0"
+            max="100"
+          />
         </div>
 
         <div class="mb-3">
@@ -19,8 +31,8 @@
           <select v-model="compresor.estatus" class="form-select">
             <option disabled value="">Selecciona estatus</option>
             <option value="Operativo">Operativo</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Desactivado">Desactivado</option>
+            <option value="Fuera de servicio">Fuera de servicio</option>
+            <option value="Apagado">Apagado</option>
           </select>
         </div>
 
@@ -36,7 +48,12 @@
 
         <div class="mb-3">
           <label class="form-label">Observaciones</label>
-          <textarea v-model="compresor.observaciones" class="form-control" rows="3" placeholder="Escribe observaciones..."></textarea>
+          <textarea
+            v-model="compresor.observaciones"
+            class="form-control"
+            rows="3"
+            placeholder="Escribe observaciones..."
+          ></textarea>
         </div>
       </div>
     </div>
@@ -48,22 +65,26 @@
 </template>
 
 <script setup>
-import { ref, defineEmits, watch } from 'vue'
+import { ref, defineEmits, watch } from "vue";
 
-const emit = defineEmits(['siguiente'])
+const emit = defineEmits(["siguiente"]);
 
 const compresor = ref({
-  serie: '',
-  nivelAceite: '',
-  estatus: '',
-  limpieza: '',
-  observaciones: ''
-})
-watch(compresor, (nuevo) => {
-  localStorage.setItem('compresorTemp', JSON.stringify(nuevo))
-}, { deep: true })
+  serie: "",
+  nivelAceite: "",
+  estatus: "",
+  limpieza: "",
+  observaciones: "",
+});
+watch(
+  compresor,
+  (nuevo) => {
+    localStorage.setItem("compresorTemp", JSON.stringify(nuevo));
+  },
+  { deep: true }
+);
 
 function emitirSiguiente() {
-  emit('siguiente', compresor.value)
+  emit("siguiente", compresor.value);
 }
 </script>

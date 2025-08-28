@@ -67,7 +67,7 @@ const centros = ref([]);
 const solicitudes = ref([]);
 const filtroCentro = ref("");
 const paginaActual = ref(1);
-const porPagina = 5;
+const porPagina = 10;
 
 const nombreCentro = (id) => {
   const centro = centros.value.find(c => c.id === id)

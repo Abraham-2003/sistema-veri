@@ -13,6 +13,12 @@
             <h5 class="card-title">{{ centro.ubicacion }}</h5>
             <p class="card-text">Responsable: {{ nombreEncargado(centro.encargado) }}</p>
           </div>
+          <div
+            v-if="tieneReporteHoy(centro.id)"
+            class="bg-warning text-dark text-center fw-bold py-1"
+          >
+            Reporte pendiente
+          </div>
         </div>
       </div>
     </div>
@@ -24,6 +30,17 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { db } from "../../servivces/auth.js";
 import { collection, getDocs } from "firebase/firestore";
+import dayjs from "dayjs";
+
+const reportesHoy = ref([]);
+
+const cargarReportesHoy = async () => {
+  const hoy = dayjs().format("YYYY-MM-DD");
+  const snapshot = await getDocs(collection(db, "reportes"));
+  reportesHoy.value = snapshot.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .filter((r) => r.fecha === hoy);
+};
 
 const centros = ref([]);
 const router = useRouter();
@@ -35,6 +52,10 @@ const cargarCentros = async () => {
     ...doc.data(),
   }));
 };
+const tieneReporteHoy = (centroId) => {
+  return reportesHoy.value.some((r) => r.centroId === centroId);
+};
+
 const gerentes = ref([]);
 
 const cargarGerentes = async () => {
@@ -55,6 +76,7 @@ const verReporte = (ubicacionCentro) => {
 onMounted(() => {
   cargarCentros();
   cargarGerentes();
+  cargarReportesHoy();
 });
 </script>
 
@@ -78,5 +100,8 @@ onMounted(() => {
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
   transform: translateY(-2px);
   border-width: 3px;
+}
+.bg-warning {
+  border-bottom: 2px solid #ffc107;
 }
 </style>

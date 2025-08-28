@@ -28,7 +28,7 @@
             <label class="form-label">Estatus</label>
             <select v-model="gas.estatus" class="form-select">
               <option disabled value="">Selecciona estatus</option>
-              <option value="Lleno">Lleno</option>
+              <option value="En uso">En uso</option>
               <option value="Agotado">Agotado</option>
             </select>
           </div>

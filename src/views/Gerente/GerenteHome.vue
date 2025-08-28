@@ -12,6 +12,14 @@
         </div>
       </router-link>
 
+      <router-link to="/Gerente/ReporteLab" class="card shadow-sm text-decoration-none">
+        <img src="../../assets/reportelab.jpg" class="card-img-top" alt="Reportes Laboratorio" />
+        <div class="card-body bg-dark bg-opacity-75 text-white">
+          <h5 class="card-title">Reportes laboratorios</h5>
+          <p class="card-text small">Registra un reporte de laboratorio</p>
+        </div>
+      </router-link>
+
       <!-- Card: Solicitudes -->
       <router-link to="/Gerente/Solicitudes" class="card shadow-sm text-decoration-none">
         <img src="../../assets/solicitudes.jpg" class="card-img-top" alt="Solicitudes" />

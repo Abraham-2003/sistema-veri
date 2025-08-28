@@ -12,7 +12,6 @@
           <th>Encargado</th>
           <th>Lineas</th>
           <th>Estatus</th>
-          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -24,14 +23,6 @@
             <span :class="centro.estatus === 'Activo' ? 'text-success' : 'text-danger'">
               {{ centro.estatus }}
             </span>
-          </td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModal(centro)">
-              Editar
-            </button>
-            <button class="btn btn-danger btn-sm" @click="desactivarCentro(centro)">
-              Desactivar
-            </button>
           </td>
         </tr>
       </tbody>
@@ -66,6 +57,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
+          
             <input
               v-model="nuevo.ubicacion"
               placeholder="Ubicación"
@@ -83,14 +75,12 @@
                 Línea {{ n }}
               </option>
             </select>
-
             <select v-model="nuevo.encargado" class="form-select mb-2">
               <option disabled value="">Selecciona un encargado</option>
               <option v-for="gerente in gerentes" :key="gerente.id" :value="gerente.id">
                 {{ gerente.nombre }}
               </option>
             </select>
-
             <select v-model="nuevo.estatus" class="form-select mb-2">
               <option value="Activo">Activo</option>
               <option value="Desactivado">Desactivado</option>
@@ -116,7 +106,7 @@ import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const centros = ref([]);
 const gerentes = ref([]);
-const nuevo = ref({ ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:"" });
+const nuevo = ref({ ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:""  });
 const editando = ref(null);
 const paginaActual = ref(1);
 const porPagina = 10;
@@ -165,8 +155,7 @@ const abrirModal = (centro = null) => {
     nuevo.value = { ...centro };
     editando.value = centro.id;
   } else {
-    nuevo.value = { ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:"" };
-    
+    nuevo.value = { ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:""  };
     editando.value = null;
   }
   new bootstrap.Modal(document.getElementById("modalCentro")).show();

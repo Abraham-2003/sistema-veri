@@ -12,7 +12,6 @@
           <th>Nombre</th>
           <th>Correo</th>
           <th>Rol</th>
-          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -20,14 +19,7 @@
           <td>{{ usuario.nombre }}</td>
           <td>{{ usuario.correo }}</td>
           <td>{{ usuario.rol }}</td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModal(usuario)">
-              Editar
-            </button>
-            <button class="btn btn-danger btn-sm" @click="eliminarUsuario(usuario.id)">
-              Eliminar
-            </button>
-          </td>
+          
         </tr>
       </tbody>
     </table>
@@ -90,7 +82,6 @@
             </div>
             <select v-model="nuevo.rol" class="form-select mb-2">
               <option disabled value="">Selecciona un rol</option>
-              <option value="Administrador">Administrador</option>
               <option value="Coordinador">Coordinador</option>
               <option value="Gerente">Gerente</option>
             </select>
@@ -114,8 +105,6 @@ import {
   collection,
   getDocs,
   addDoc,
-  updateDoc,
-  deleteDoc,
   doc,
 } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
