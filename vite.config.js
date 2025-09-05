@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Gestiond de Vereficentros',
+        name: 'Gestion de Vereficentros',
         short_name: 'Veri',
         description: 'Sistema de reportes para centros de verificación',
         theme_color: '#198754',
@@ -17,19 +17,19 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'logo.webp',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'webp'
           },
           {
-            src: 'pwa-iconoapp.webp',
+            src: 'logo.webp',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'webp'
           },
           {
-            src: 'apple-touch-icon.png',
+            src: 'logo.webp',
             sizes: '180x180',
-            type: 'image/png',
+            type: 'webp',
             purpose: 'any maskable'
           }
         ]

@@ -1,7 +1,9 @@
 <template>
-  <div class="admin-layout">
+   <div class="d-flex min-vh-100">
     <AdminSidebar />
+    <div class="flex-grow-1 p-4">
     <router-view />
+  </div>
   </div>
 </template>
 

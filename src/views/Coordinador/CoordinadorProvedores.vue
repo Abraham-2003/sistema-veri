@@ -2,7 +2,7 @@
   <div class="container py-4">
     <h3 class="mb-4">Gestión de Proveedores</h3>
 
-    <button class="btn btn-success mb-3" @click="abrirModal()">➕ Nuevo proveedor</button>
+    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo proveedor</button>
 
     <!-- Tabla -->
     <table class="table table-bordered table-hover">
@@ -21,7 +21,6 @@
           <td>{{ prov.servicio }}</td>
           <td>
             <button class="btn btn-warning btn-sm me-2" @click="abrirModal(prov)">Editar</button>
-            <button class="btn btn-danger btn-sm" @click="eliminarProveedor(prov.id)">Eliminar</button>
           </td>
         </tr>
       </tbody>

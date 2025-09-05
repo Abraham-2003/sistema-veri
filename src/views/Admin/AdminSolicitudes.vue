@@ -21,6 +21,8 @@
           <th>Fecha de Pago</th>
           <th>Fecha de Entrega</th>
           <th>Observaciones</th>
+          <th>Acciones</th>
+          <!-- nueva columna -->
         </tr>
       </thead>
       <tbody>
@@ -32,6 +34,20 @@
           <td>{{ sol.fechaPago }}</td>
           <td>{{ sol.fechaEntrega }}</td>
           <td>{{ sol.observaciones }}</td>
+          <td>
+            <button
+              class="btn btn-warning btn-sm me-2"
+              @click="abrirModalEdicion(sol)"
+            >
+              Editar
+            </button>
+            <button
+              class="btn btn-danger btn-sm"
+              @click="eliminarSolicitud(sol.id)"
+            >
+              Eliminar
+            </button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -56,12 +72,82 @@
       </ul>
     </nav>
   </div>
+  <div class="modal fade" id="modalEdicion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Solicitud</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label">Tipo</label>
+            <input v-model="solicitudEditada.tipo" type="text" class="form-control" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Proveedor</label>
+            <input
+              v-model="solicitudEditada.proveedor"
+              type="text"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Fecha de Solicitud</label>
+            <input
+              v-model="solicitudEditada.fechaSolicitud"
+              type="date"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Fecha de Pago</label>
+            <input
+              v-model="solicitudEditada.fechaPago"
+              type="date"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Fecha de Entrega</label>
+            <input
+              v-model="solicitudEditada.fechaEntrega"
+              type="date"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Observaciones</label>
+            <textarea
+              v-model="solicitudEditada.observaciones"
+              class="form-control"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-success" @click="guardarCambiosSolicitud">
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { db } from "../../servivces/auth.js";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const centros = ref([]);
 const solicitudes = ref([]);
@@ -69,11 +155,44 @@ const filtroCentro = ref("");
 const paginaActual = ref(1);
 const porPagina = 5;
 
-const nombreCentro = (id) => {
-  const centro = centros.value.find(c => c.id === id)
-  return centro ? centro.ubicacion : 'Centro desconocido'
-}
+const solicitudEditada = ref({});
+const modal = ref(null);
 
+const abrirModalEdicion = (solicitud) => {
+  solicitudEditada.value = { ...solicitud };
+  const modalElement = document.getElementById("modalEdicion");
+  modal.value = new bootstrap.Modal(modalElement);
+  modal.value.show();
+};
+
+const guardarCambiosSolicitud = async () => {
+  try {
+    const { id, ...datosActualizados } = solicitudEditada.value;
+    await updateDoc(doc(db, "solicitudes", id), datosActualizados);
+    console.log("[✅ Solicitud actualizada]", id);
+    modal.value.hide();
+    await cargarSolicitudes();
+  } catch (error) {
+    console.error("[❌ Error al actualizar solicitud]", error);
+  }
+};
+
+const eliminarSolicitud = async (id) => {
+  const confirmacion = confirm("¿Eliminar esta solicitud?");
+  if (!confirmacion) return;
+
+  try {
+    await deleteDoc(doc(db, "solicitudes", id));
+    console.log("[🗑️ Solicitud eliminada]", id);
+    await cargarSolicitudes();
+  } catch (error) {
+    console.error("[❌ Error al eliminar solicitud]", error);
+  }
+};
+const nombreCentro = (id) => {
+  const centro = centros.value.find((c) => c.id === id);
+  return centro ? centro.ubicacion : "Centro desconocido";
+};
 
 const cargarCentros = async () => {
   const snapshot = await getDocs(
