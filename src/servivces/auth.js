@@ -1,10 +1,10 @@
 import { db } from '../firebase/config.js'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
-export async function login(correo, password) {
+export async function login(nombre, password) {
   const q = query(
     collection(db, 'usuarios'),
-    where('correo', '==', correo),
+    where('Nombre', '==', nombre),
     where('password', '==', password)
   )
   const snapshot = await getDocs(q)

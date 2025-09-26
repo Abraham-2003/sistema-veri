@@ -16,35 +16,37 @@
         <tr>
           <th>Centro</th>
           <th>Tipo</th>
+          <th>Elemento</th>
           <th>Proveedor o Laboratorio</th>
           <th>Fecha de Solicitud</th>
           <th>Fecha de Pago</th>
           <th>Fecha de Entrega</th>
           <th>Observaciones</th>
+          <th>Estatus</th>
           <th>Acciones</th>
-          <!-- nueva columna -->
         </tr>
       </thead>
       <tbody>
         <tr v-for="sol in solicitudesFiltradas" :key="sol.id">
           <td>{{ nombreCentro(sol.centroId) }}</td>
           <td>{{ sol.tipo }}</td>
+          <td>{{ sol.elemento }}</td>
           <td>{{ sol.proveedor }}</td>
           <td>{{ sol.fechaSolicitud }}</td>
           <td>{{ sol.fechaPago }}</td>
           <td>{{ sol.fechaEntrega }}</td>
           <td>{{ sol.observaciones }}</td>
+          <td
+            class="badge"
+            :class="sol.estatus === 'Pendiente' ? 'bg-warning' : 'bg-success'"
+          >
+            {{ sol.estatus }}
+          </td>
           <td>
-            <button
-              class="btn btn-warning btn-sm me-2"
-              @click="abrirModalEdicion(sol)"
-            >
+            <button class="btn btn-warning btn-sm me-2" @click="abrirModalEdicion(sol)">
               Editar
             </button>
-            <button
-              class="btn btn-danger btn-sm"
-              @click="eliminarSolicitud(sol.id)"
-            >
+            <button class="btn btn-danger btn-sm" @click="eliminarSolicitud(sol.id)">
               Eliminar
             </button>
           </td>

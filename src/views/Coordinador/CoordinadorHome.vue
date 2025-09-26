@@ -65,10 +65,15 @@ async function obtenerCentrosActivos() {
 }
 
 async function obtenerSolicitudesActivas() {
-  const q = query(collection(db, "solicitudes"));
+  const q = query(
+    collection(db, "solicitudes"),
+    where("estatus", "==", "Pendiente")
+  );
+
   const snapshot = await getDocs(q);
-  return snapshot.size;
+  return snapshot.size; 
 }
+
 
 async function obtenerInfraestructuraFueraServicio() {
   const q = query(collection(db, "infraestructura"), where("estatus", "==", "Fuera de servicio"));

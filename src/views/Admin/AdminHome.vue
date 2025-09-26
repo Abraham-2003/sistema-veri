@@ -43,50 +43,250 @@
       </div>
     </main>
   </div>
+
+  <div>
+    <h5 class="text-center mb-4 text-success">Desempeño por Verificentro</h5>
+
+    <select v-model="centroSeleccionado" class="form-select mb-4">
+      <option disabled value="">Selecciona un centro</option>
+      <option v-for="(centro, id) in centros" :key="id" :value="id">
+        {{ centro.ubicacion }}
+      </option>
+    </select>
+
+    <div v-if="centroSeleccionado" class="d-flex flex-wrap justify-content-center gap-4">
+      <!-- Tarjeta 1: Indicadores principales -->
+      <div
+        class="card shadow-sm border border-secondary-subtle"
+        style="width: 400px; height: 280px"
+      >
+        <div class="card-body">
+          <Bar
+            :data="{
+              labels: ['Reportes', 'Cumplimiento (%)', 'Fallas'],
+              datasets: [
+                {
+                  label: resumenPorCentro[centroSeleccionado].ubicacion,
+                  data: [
+                    resumenPorCentro[centroSeleccionado].reportes,
+                    resumenPorCentro[centroSeleccionado].cumplimiento,
+                    resumenPorCentro[centroSeleccionado].fallas,
+                  ],
+                  backgroundColor: ['#198754', '#0d6efd', '#dc3545'],
+                },
+              ],
+            }"
+            :options="{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                title: { display: true, text: 'Indicadores principales' },
+              },
+              scales: {
+                y: { beginAtZero: true },
+              },
+            }"
+          />
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Consumo de gases -->
+      <div
+        class="card shadow-sm border border-secondary-subtle"
+        style="width: 400px; height: 280px"
+      >
+        <div class="card-body">
+          <Bar
+            :data="{
+              labels: Object.keys(resumenPorCentro[centroSeleccionado].consumoGases),
+              datasets: [
+                {
+                  label: 'Consumo de gases (PSI)',
+                  data: Object.values(resumenPorCentro[centroSeleccionado].consumoGases),
+                  backgroundColor: ['#ffc107', '#20c997', '#6f42c1'],
+                },
+              ],
+            }"
+            :options="{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                title: { display: true, text: 'Consumo de gases en uso' },
+              },
+              scales: {
+                y: { beginAtZero: true },
+              },
+            }"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
-<script>
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore'
-import dayjs from 'dayjs'
+<script setup>
+import { ref, onMounted, computed } from "vue";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../../servivces/auth.js"; // ajusta según tu ruta
+import { Bar } from "vue-chartjs";
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+} from "chart.js";
 
-const db = getFirestore()
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+import dayjs from "dayjs";
+
+const user = ref(JSON.parse(localStorage.getItem("user")) || {});
+const centrosActivos = ref(0);
+const solicitudesActivas = ref(0);
+const reportesHoy = ref(0);
 
 async function obtenerReportesHoy() {
-  const hoy = dayjs().format('YYYY-MM-DD')
-  const q = query(collection(db, 'reportes'), where('fecha', '==', hoy))
-  const snapshot = await getDocs(q)
-  return snapshot.size
+  const inicioDia = dayjs().startOf("day").toISOString();
+  const finDia = dayjs().endOf("day").toISOString();
+
+  const q = query(
+    collection(db, "reportes"),
+    where("fecha", ">=", inicioDia),
+    where("fecha", "<=", finDia)
+  );
+
+  const snapshot = await getDocs(q);
+  reportesHoy.value = snapshot.size;
 }
 
 async function obtenerCentrosActivos() {
-  const q = query(collection(db, 'centros'), where('estatus', '==', 'Activo'))
-  const snapshot = await getDocs(q)
-  return snapshot.size
+  const q = query(collection(db, "centros"), where("estatus", "==", "Activo"));
+  const snapshot = await getDocs(q);
+  centrosActivos.value = snapshot.size;
 }
 
 async function obtenerSolicitudesActivas() {
-  const q = query(collection(db, 'solicitudes'))
-  const snapshot = await getDocs(q)
-  return snapshot.size
+  const q = query(collection(db, "solicitudes"), where("estatus", "==", "Pendiente"));
+  const snapshot = await getDocs(q);
+  solicitudesActivas.value = snapshot.size;
 }
 
-export default {
-  data() {
-    return {
-      user: JSON.parse(localStorage.getItem("user")) || {},
-      centrosActivos: 0,
-      solicitudesActivas: 0,
-      reportesHoy: 0,
-    };
-  },
-  async mounted() {
-    this.centrosActivos = await obtenerCentrosActivos();
-    this.solicitudesActivas = await obtenerSolicitudesActivas();
-    this.reportesHoy = await obtenerReportesHoy();
-  },
-};
-</script>
+onMounted(async () => {
+  await obtenerCentrosActivos();
+  await obtenerSolicitudesActivas();
+  await obtenerReportesHoy();
+});
 
+const centros = ref({});
+const resumenPorCentro = ref({});
+const centroSeleccionado = ref("");
+
+async function cargarCentros() {
+  const snapshot = await getDocs(collection(db, "centros"));
+  snapshot.forEach((doc) => {
+    centros.value[doc.id] = doc.data();
+  });
+}
+
+async function cargarReportes() {
+  const snapshot = await getDocs(collection(db, "reportes"));
+  const agrupado = {};
+
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    const id = data.centroId;
+
+    if (!agrupado[id]) {
+      agrupado[id] = {
+        reportes: 0,
+        fallas: 0,
+        gases: { Baja: [], Media: [], Cero: [] },
+      };
+    }
+
+    agrupado[id].reportes++;
+
+    // Fallas en líneas
+    const lineas = data.lineas || {};
+    Object.values(lineas).forEach((linea) => {
+      if (["Apagada", "Fuera de servicio"].includes(linea.estado)) {
+        agrupado[id].fallas++;
+      }
+    });
+
+    // Gases en uso
+    const gases = data.gases?.gasesUso || {};
+    ["Baja", "Media", "Cero"].forEach((tipo) => {
+      const registros = Array.isArray(gases[tipo]) ? gases[tipo] : [];
+      registros.forEach((gas) => {
+        agrupado[id].gases[tipo].push({
+          psi: gas.psi,
+          fecha: gas.fecha || doc.data().fecha || "", // usa fecha del gas o del reporte
+        });
+      });
+    });
+  });
+
+  // Función para calcular consumo por ciclos
+  function calcularConsumoPorCiclos(registros) {
+    let consumoTotal = 0;
+    let psiInicial = null;
+
+    registros.forEach((registro, i) => {
+      const psiActual = registro.psi;
+
+      if (psiInicial === null) {
+        psiInicial = psiActual;
+        return;
+      }
+
+      const psiAnterior = registros[i - 1].psi;
+
+      if (psiActual > psiAnterior) {
+        consumoTotal += psiInicial - psiAnterior;
+        psiInicial = psiActual;
+      }
+
+      if (i === registros.length - 1) {
+        consumoTotal += psiInicial - psiActual;
+      }
+    });
+
+    return consumoTotal;
+  }
+
+  // Procesar métricas
+  Object.entries(agrupado).forEach(([id, datos]) => {
+    const consumoGases = {};
+
+    Object.entries(datos.gases).forEach(([tipo, registros]) => {
+      const ordenados = registros.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+      consumoGases[tipo] = calcularConsumoPorCiclos(ordenados);
+    });
+
+    const diaActual = dayjs().date(); 
+    const reportesEsperados = diaActual * 2;
+
+    resumenPorCentro.value[id] = {
+      ubicacion: centros.value[id]?.ubicacion || id,
+      reportes: datos.reportes,
+      cumplimiento: Math.round((datos.reportes / reportesEsperados) * 100),
+      fallas: datos.fallas,
+      consumoGases,
+    };
+  });
+}
+
+
+onMounted(async () => {
+  await cargarCentros();
+  await cargarReportes();
+});
+</script>
 <style scoped>
 /* Layout */
 .admin-content {

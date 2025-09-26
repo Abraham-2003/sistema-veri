@@ -47,8 +47,9 @@ const cargarReportesHoy = async () => {
   const snapshot = await getDocs(collection(db, "reportes"));
   reportesHoy.value = snapshot.docs
     .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .filter((r) => r.fecha === hoy);
+    .filter((r) => dayjs(r.fecha).isSame(hoy, "day"));
 };
+
 
 const centros = ref([]);
 const router = useRouter();

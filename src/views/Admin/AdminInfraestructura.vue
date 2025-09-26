@@ -10,7 +10,7 @@
       </option>
     </select>
 
-    <button class="btn btn-success mb-3" @click="abrirModal()">➕ Nuevo elemento</button>
+    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo elemento</button>
 
     <!-- Tabla -->
     <table class="table table-bordered table-hover">
@@ -18,6 +18,7 @@
         <tr>
           <th>Elemento</th>
           <th>Estatus</th>
+          <th>Áreas con falla</th>
           <th>Última Revisión</th>
           <th>Observaciones</th>
           <th>Centro</th>
@@ -30,6 +31,22 @@
           <td :class="item.estatus === 'Operativo' ? 'text-success' : 'text-danger'">
             {{ item.estatus }}
           </td>
+          <td>
+            <span
+              v-for="(area, index) in item.areasConFalla || []"
+              :key="index"
+              class="badge bg-danger me-1"
+            >
+              {{ area }}
+            </span>
+            <span
+              v-if="!item.areasConFalla || item.areasConFalla.length === 0"
+              class="text-muted"
+            >
+              Sin fallas
+            </span>
+          </td>
+
           <td>{{ item.ultimaRevision }}</td>
           <td>{{ item.observaciones }}</td>
           <td>{{ obtenerNombreCentro(item.centroId) }}</td>
@@ -76,6 +93,29 @@
               placeholder="Elemento"
               class="form-control mb-2"
             />
+            <label class="form-label">Áreas asignadas</label>
+            <br>
+            <div
+              v-for="(area, index) in nuevo.areas"
+              :key="index"
+              class="input-group mb-2"
+            >
+              <input
+                v-model="nuevo.areas[index]"
+                type="text"
+                class="form-control"
+                placeholder="Área"
+              />
+              <button class="btn btn-outline-danger" @click.prevent="eliminarArea(index)">
+                Borrar
+              </button>
+            </div>
+            <button
+              class="btn btn-outline-primary btn-sm mb-3"
+              @click.prevent="agregarArea"
+            >
+              Agregar área
+            </button>
 
             <select v-model="nuevo.estatus" class="form-select mb-2">
               <option value="Operativo">Operativo</option>
@@ -121,10 +161,19 @@ const nuevo = ref({
   estatus: "Operativo",
   observaciones: "",
   centroId: "",
+  areas: [],
 });
 const editando = ref(null);
 const paginaActual = ref(1);
 const porPagina = 10;
+
+const agregarArea = () => {
+  nuevo.value.areas.push("");
+};
+
+const eliminarArea = (index) => {
+  nuevo.value.areas.splice(index, 1);
+};
 
 const cargarInfraestructura = async () => {
   const snapshot = await getDocs(collection(db, "infraestructura"));
@@ -139,6 +188,10 @@ const cargarCentros = async () => {
 const guardarInfraestructura = async () => {
   const hoy = new Date().toISOString().split("T")[0];
   nuevo.value.ultimaRevision = hoy;
+  // Si el estatus es "Operativo", eliminamos las áreas con falla
+  if (nuevo.value.estatus === "Operativo") {
+    nuevo.value.areasConFalla = [];
+  }
 
   if (editando.value) {
     await updateDoc(doc(db, "infraestructura", editando.value), { ...nuevo.value });
@@ -157,7 +210,13 @@ const abrirModal = (item = null) => {
     nuevo.value = { ...item };
     editando.value = item.id;
   } else {
-    nuevo.value = { elemento: "", estatus: "Operativo", observaciones: "", centroId: "" };
+    nuevo.value = {
+      elemento: "",
+      estatus: "Operativo",
+      observaciones: "",
+      centroId: "",
+      areas: [],
+    };
     editando.value = null;
   }
   new bootstrap.Modal(document.getElementById("modalInfra")).show();

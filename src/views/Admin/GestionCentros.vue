@@ -2,7 +2,7 @@
   <div class="container py-4">
     <h3 class="mb-4">Gestión de Centros</h3>
 
-    <button class="btn btn-success mb-3" @click="abrirModal()">➕ Nuevo Centro</button>
+    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo Centro</button>
 
     <!-- Tabla -->
     <table class="table table-bordered table-hover">
@@ -95,6 +95,29 @@
               <option value="Activo">Activo</option>
               <option value="Desactivado">Desactivado</option>
             </select>
+            <hr />
+            <h6 class="mb-3">Microbanca</h6>
+
+            <input
+              v-model="nuevo.microbanca.marca"
+              placeholder="Marca"
+              class="form-control mb-2"
+            />
+            <input
+              v-model="nuevo.microbanca.serie"
+              placeholder="Número de serie"
+              class="form-control mb-2"
+            />
+            <input
+              v-model="nuevo.microbanca.serieNox"
+              placeholder="Número de serie NOX"
+              class="form-control mb-2"
+            />
+            <input
+              v-model="nuevo.microbanca.serieOxigeno"
+              placeholder="Número de serie Oxígeno"
+              class="form-control mb-2"
+            />
           </div>
           <div class="modal-footer">
             <button type="submit" class="btn btn-primary">Guardar</button>
@@ -116,7 +139,20 @@ import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const centros = ref([]);
 const gerentes = ref([]);
-const nuevo = ref({ ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:"" });
+const nuevo = ref({
+  ubicacion: "",
+  lineas: "",
+  encargado: "",
+  estatus: "Activo",
+  lineaDual: "",
+  microbanca: {
+    marca: "",
+    serie: "",
+    serieNox: "",
+    serieOxigeno: "",
+  },
+});
+
 const editando = ref(null);
 const paginaActual = ref(1);
 const porPagina = 10;
@@ -145,7 +181,6 @@ const guardarCentro = async () => {
     centroId = editando.value;
     editando.value = null;
   } else {
-    // Crear nuevo centro
     const centroRef = await addDoc(collection(db, "centros"), { ...nuevo.value });
     centroId = centroRef.id;
   }
@@ -162,13 +197,37 @@ const guardarCentro = async () => {
 
 const abrirModal = (centro = null) => {
   if (centro) {
-    nuevo.value = { ...centro };
+    nuevo.value = {
+      ubicacion: centro.ubicacion || "",
+      lineas: centro.lineas || "",
+      encargado: centro.encargado || "",
+      estatus: centro.estatus || "Activo",
+      lineaDual: centro.lineaDual || "",
+      microbanca: {
+        marca: centro.microbanca?.marca || "",
+        serie: centro.microbanca?.serie || "",
+        serieNox: centro.microbanca?.serieNox || "",
+        serieOxigeno: centro.microbanca?.serieOxigeno || "",
+      },
+    };
     editando.value = centro.id;
   } else {
-    nuevo.value = { ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:"" };
-    
+    nuevo.value = {
+      ubicacion: "",
+      lineas: "",
+      encargado: "",
+      estatus: "Activo",
+      lineaDual: "",
+      microbanca: {
+        marca: "",
+        serie: "",
+        serieNox: "",
+        serieOxigeno: "",
+      },
+    };
     editando.value = null;
   }
+
   new bootstrap.Modal(document.getElementById("modalCentro")).show();
 };
 

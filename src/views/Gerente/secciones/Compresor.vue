@@ -5,16 +5,6 @@
     <div class="card shadow-sm">
       <div class="card-body">
         <div class="mb-3">
-          <label class="form-label">Serie</label>
-          <input
-            v-model="compresor.serie"
-            type="text"
-            class="form-control"
-            placeholder="Ej. CMP-2023-001"
-          />
-        </div>
-
-        <div class="mb-3">
           <label class="form-label">Nivel de aceite (%)</label>
           <input
             v-model="compresor.nivelAceite"
@@ -35,17 +25,6 @@
             <option value="Apagado">Apagado</option>
           </select>
         </div>
-
-        <div class="mb-3">
-          <label class="form-label">Limpieza</label>
-          <select v-model="compresor.limpieza" class="form-select">
-            <option disabled value="">Selecciona limpieza</option>
-            <option value="Limpio">Limpio</option>
-            <option value="Sucio">Sucio</option>
-            <option value="No aplica">No aplica</option>
-          </select>
-        </div>
-
         <div class="mb-3">
           <label class="form-label">Observaciones</label>
           <textarea
@@ -57,20 +36,32 @@
         </div>
       </div>
     </div>
-
-    <button class="btn btn-success w-100 mt-3" @click="emitirSiguiente">
-      Funcionamiento de líneas →
-    </button>
+    <br>
+    <div class="text-center">
+      <button
+        class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto mb-2"
+        @click="emitirSiguiente"
+      >
+        Funcionamiento de líneas <i class="bi bi-arrow-right-circle me-2"></i>
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, defineEmits, watch } from "vue";
+import Swal from "sweetalert2";
 
 const emit = defineEmits(["siguiente"]);
 
+function validarCompresor() {
+  return (
+    compresor.value.nivelAceite !== "" &&
+    compresor.value.estatus.trim() !== ""
+  );
+}
+
 const compresor = ref({
-  serie: "",
   nivelAceite: "",
   estatus: "",
   limpieza: "",
@@ -85,6 +76,22 @@ watch(
 );
 
 function emitirSiguiente() {
+  if (!validarCompresor()) {
+    Swal.fire({
+      icon: "warning",
+      title: "Campos incompletos",
+      text: "Por favor llena el nivel de aceite y el estatus del compresor antes de continuar.",
+      confirmButtonText: "Entendido",
+      customClass: {
+        confirmButton: "btn btn-success text-light fw-semibold px-4 py-2 rounded-pill"
+      },
+      buttonsStyling: false
+    });
+    return;
+  }
+
+  localStorage.setItem("compresorTemp", JSON.stringify(compresor.value));
   emit("siguiente", compresor.value);
 }
+
 </script>

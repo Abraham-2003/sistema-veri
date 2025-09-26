@@ -74,7 +74,13 @@
       >
         Reportes Laboratorios
       </router-link>
-
+      <router-link
+        to="/Administrador/ConsultasAdmin"
+        class="nav-link text-white py-2 px-3 rounded mb-1"
+        active-class="bg-secondary"
+      >
+        Consultas
+      </router-link>
       <router-link
         to="/Administrador/Solicitudes"
         class="nav-link text-white py-2 px-3 rounded mb-1"

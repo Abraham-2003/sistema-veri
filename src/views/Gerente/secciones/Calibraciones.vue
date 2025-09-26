@@ -50,7 +50,15 @@
         placeholder=""
       ></textarea>
     </div>
-    <button class="btn btn-success w-100 mt-3" @click="emitirSiguiente">Gases →</button>
+    <div class="text-center">
+      <button
+        class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto"
+        @click="emitirSiguiente"
+        
+      >
+        Gases  <i class="bi bi-arrow-right-circle me-2"></i>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -77,9 +85,7 @@ const equipos = [
 ];
 
 function equiposPorLinea(linea) {
-  return linea == props.lineaDual
-    ? equipos
-    : equipos.filter((e) => e !== "Opacímetro");
+  return linea == props.lineaDual ? equipos : equipos.filter((e) => e !== "Opacímetro");
 }
 
 const calibraciones = ref({});
@@ -87,9 +93,7 @@ const observacionesGenerales = ref("");
 const emit = defineEmits(["siguiente"]);
 
 function todasSeleccionadas(linea) {
-  return equiposPorLinea(linea).every(
-    (equipo) => calibraciones.value[linea][equipo]
-  );
+  return equiposPorLinea(linea).every((equipo) => calibraciones.value[linea][equipo]);
 }
 
 function toggleLinea(linea) {
@@ -110,6 +114,7 @@ watch(
           calibraciones.value[linea][equipo] = false;
         });
       });
+      observacionesGenerales.value = "";
       console.log("[✅ Calibraciones inicializadas]", calibraciones.value);
     } else {
       console.warn("[⚠️ props.lineas no es un array válido]", lineas);
@@ -127,12 +132,13 @@ watch(
   { deep: true }
 );
 
-watch(
-  observacionesGenerales,
-  (nuevo) => {
+watch(observacionesGenerales, (nuevo) => {
+  if (nuevo.trim() === "") {
+    localStorage.removeItem("observacionesGeneralesTemp");
+  } else {
     localStorage.setItem("observacionesGeneralesTemp", nuevo);
   }
-);
+});
 
 function emitirSiguiente() {
   emit("siguiente", {
@@ -141,4 +147,3 @@ function emitirSiguiente() {
   });
 }
 </script>
-

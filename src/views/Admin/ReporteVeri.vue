@@ -26,8 +26,8 @@
           locale="es"
           :selected-date="fechaSeleccionada"
           :events="eventosDeReporte"
-          @cell-click="seleccionarFecha"
-          default-view="month"
+          @event-click="seleccionarReporteDesdeEvento"
+          default-view="week"
           hide-view-selector
           style="height: 300px"
         />
@@ -35,8 +35,8 @@
     </transition>
 
     <div v-if="loading" class="text-center text-muted">Cargando reporte...</div>
-    <div v-else-if="!reporte" class="alert alert-warning">
-      No se encontró reporte para la fecha seleccionada.
+    <div v-else-if="!reporteSeleccionado" class="alert alert-warning">
+      Seleccione una fecha para ver el reporte.
     </div>
     <div v-else class="accordion" id="reporteCollapse">
       <!-- Calibraciones -->
@@ -70,7 +70,6 @@
               </thead>
               <tbody>
                 <tr v-for="[linea, equipos] in lineasCalibradas" :key="linea">
-
                   <td>
                     <strong>{{ linea }}</strong>
                   </td>
@@ -94,10 +93,13 @@
             </table>
 
             <!-- Observaciones generales -->
-            <div v-if="reporte.calibraciones.observacionesGenerales" class="mt-3">
+            <div
+              v-if="reporteSeleccionado.calibraciones.observacionesGenerales"
+              class="mt-3"
+            >
               <h6 class="text-muted">Observaciones generales</h6>
               <p class="border rounded p-2 bg-light text-start">
-                {{ reporte.calibraciones.observacionesGenerales }}
+                {{ reporteSeleccionado.calibraciones.observacionesGenerales }}
               </p>
             </div>
           </div>
@@ -135,7 +137,12 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(gas, i) in reporte.gases.gasesUso" :key="'uso-' + i">
+                <tr
+                  v-for="(gas, i) in Object.values(
+                    reporteSeleccionado.gases.gasesUso
+                  ).flat()"
+                  :key="'uso-' + i"
+                >
                   <td>{{ gas.tipo }}</td>
                   <td>{{ gas.serie }}</td>
                   <td>{{ gas.psi }}</td>
@@ -159,7 +166,12 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(gas, i) in reporte.gases.gasesStock" :key="'stock-' + i">
+                <tr
+                  v-for="(gas, i) in Object.values(
+                    reporteSeleccionado.gases.gasesStock
+                  ).flat()"
+                  :key="'stock-' + i"
+                >
                   <td>{{ gas.tipo }}</td>
                   <td>{{ gas.serie }}</td>
                   <td>{{ gas.psi }}</td>
@@ -196,18 +208,14 @@
                 <tr>
                   <th>Estatus</th>
                   <th>Observaciones</th>
-                  <th>Limpieza</th>
                   <th>Nivel de Aceite</th>
-                  <th>Serie</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>{{ reporte.compresor.estatus }}</td>
-                  <td>{{ reporte.compresor.observaciones }}</td>
-                  <td>{{ reporte.compresor.limpieza }}</td>
-                  <td>{{ reporte.compresor.nivelAceite }}</td>
-                  <td>{{ reporte.compresor.serie }}</td>
+                  <td>{{ reporteSeleccionado.compresor.estatus }}</td>
+                  <td>{{ reporteSeleccionado.compresor.observaciones }}</td>
+                  <td>{{ reporteSeleccionado.compresor.nivelAceite }}</td>
                 </tr>
               </tbody>
             </table>
@@ -243,7 +251,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(datos, linea) in reporte.lineas" :key="linea">
+                <tr v-for="(datos, linea) in reporteSeleccionado.lineas" :key="linea">
                   <td>
                     <strong>{{ linea }}</strong>
                   </td>
@@ -288,7 +296,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(datos, linea) in reporte.tacometros" :key="linea">
+                <tr v-for="(datos, linea) in reporteSeleccionado.tacometros" :key="linea">
                   <td>
                     <strong>{{ linea }}</strong>
                   </td>
@@ -348,7 +356,7 @@
           data-bs-parent="#reporteCollapse"
         >
           <div class="accordion-body">
-            {{ reporte.observaciones }}
+            {{ reporteSeleccionado.observaciones }}
           </div>
         </div>
       </div>
@@ -373,11 +381,15 @@ const cargarFechasConReporte = async () => {
   const snapshot = await getDocs(
     query(collection(db, "reportes"), where("centroId", "==", centroId.value))
   );
-  fechasConReporte.value = snapshot.docs.map((doc) => doc.data().fecha);
+  fechasConReporte.value = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 };
+
 const lineasCalibradas = computed(() => {
-  if (!reporte.value || !reporte.value.calibraciones) return [];
-  return Object.entries(reporte.value.calibraciones).filter(
+  if (!reporteSeleccionado.value?.calibraciones) return [];
+  return Object.entries(reporteSeleccionado.value.calibraciones).filter(
     ([key]) => key !== "observacionesGenerales"
   );
 });
@@ -390,12 +402,11 @@ const obtenerCentroId = async () => {
     (doc) => doc.data().ubicacion === route.params.ubicacion
   );
   centroId.value = centroDoc ? centroDoc.id : null;
-  console.log("[📌 Centro encontrado]", centroId.value);
 };
 
 const route = useRoute();
 const ubicacionCentro = route.params.ubicacion;
-const fechaSeleccionada = ref(dayjs().format("YYYY-MM-DD"));
+const fechaSeleccionada = ref(dayjs().format("YYYY-MM-DD HH:mm:ss"));
 const reporte = ref(null);
 const loading = ref(false);
 const modoExportacion = ref(false);
@@ -403,50 +414,73 @@ const contenidoReporte = ref(null);
 const mostrarCalendario = ref(false);
 
 const seleccionarFecha = (evento) => {
-  let fechaReal;
-
-  if (evento?.start instanceof Date) {
-    fechaReal = evento.start;
-  } else if (evento instanceof Date) {
-    fechaReal = evento;
-  } else if (evento?.date instanceof Date) {
-    fechaReal = evento.date;
-  }
+  let fechaReal =
+    evento?.start instanceof Date ? evento.start :
+    evento instanceof Date ? evento :
+    evento?.date instanceof Date ? evento.date :
+    null;
 
   if (!fechaReal || !dayjs(fechaReal).isValid()) {
-    console.warn("[⚠️ Fecha inválida desde VueCal]", evento);
     return;
   }
 
-  const fechaFormateada = dayjs(fechaReal).format("YYYY-MM-DD");
-  console.log("[📅 Fecha seleccionada]", fechaFormateada);
-
-  fechaSeleccionada.value = fechaFormateada;
-  consultarReporte();
+  fechaSeleccionada.value = dayjs(fechaReal).format("YYYY-MM-DD HH:mm:ss");
+  consultarReporte(); 
 };
 
+
 const eventosDeReporte = computed(() =>
-  fechasConReporte.value.map((fecha) => ({
-    start: fecha,
-    end: fecha,
-    title: "Reporte detectado",
-    class: "reporte-dia",
-  }))
+  fechasConReporte.value.map((r) => {
+    const fechaDate =
+      r.fecha instanceof Date
+        ? r.fecha
+        : r.fecha?.toDate
+        ? r.fecha.toDate()
+        : new Date(r.fecha);
+
+    return {
+      id: r.id,
+      start: dayjs(fechaDate).startOf("day").toDate(),
+      end: dayjs(fechaDate).endOf("day").toDate(),
+      title: "Reporte detectado",
+      content: dayjs(fechaDate).format("HH:mm:ss"),
+      class: "reporte-dia",
+    };
+  })
 );
+
 
 const consultarReporte = async () => {
   if (!centroId.value) return;
-  console.log("[🔍 Buscando reporte para]", fechaSeleccionada.value);
+
+  const inicioDia = dayjs(fechaSeleccionada.value).startOf("day").toISOString();
+  const finDia = dayjs(fechaSeleccionada.value).endOf("day").toISOString();
 
   const q = query(
     collection(db, "reportes"),
     where("centroId", "==", centroId.value),
-    where("fecha", "==", fechaSeleccionada.value)
+    where("fecha", ">=", inicioDia),
+    where("fecha", "<=", finDia)
   );
 
   const snapshot = await getDocs(q);
   reporte.value = snapshot.empty ? null : snapshot.docs[0].data();
 };
+
+const reporteSeleccionado = ref(null);
+
+const seleccionarReporteDesdeEvento = (evento) => {
+  const id = evento.id;
+  const encontrado = fechasConReporte.value.find((r) => r.id === id);
+
+  if (encontrado) {
+    reporteSeleccionado.value = encontrado;
+    fechaSeleccionada.value = dayjs(encontrado.fecha).format("YYYY-MM-DD HH:mm:ss");
+    consultarReporte();
+  } else {
+  }
+};
+
 
 const descargarPDF = () => {
   modoExportacion.value = true;
@@ -463,7 +497,6 @@ const descargarPDF = () => {
       .from(contenidoReporte.value)
       .save();
 
-    // Restaurar el estado después de generar
     setTimeout(() => {
       modoExportacion.value = false;
     }, 1000);
@@ -478,7 +511,7 @@ onMounted(async () => {
 </script>
 <style>
 .reporte-dia {
-  background-color: #fff3cd !important;
+  background-color: #fbeab3ff !important;
   border: 2px solid #ffc107;
 }
 .fade-enter-active,

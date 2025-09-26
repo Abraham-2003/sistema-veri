@@ -7,9 +7,13 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
+      includeAssets: [
+        'favicon.png', 
+        'robots.txt', 
+        'apple-touch-icon.png'
+      ],
       manifest: {
-        name: 'Gestion de Vereficentros',
+        name: 'Gestión de Verificentros',
         short_name: 'Veri',
         description: 'Sistema de reportes para centros de verificación',
         theme_color: '#198754',
@@ -17,19 +21,19 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'logo.webp',
+            src: 'logo-192.png',
             sizes: '192x192',
-            type: 'webp'
+            type: 'image/png'
           },
           {
-            src: 'logo.webp',
+            src: 'logo-512.png',
             sizes: '512x512',
-            type: 'webp'
+            type: 'image/png'
           },
           {
-            src: 'logo.webp',
-            sizes: '180x180',
-            type: 'webp',
+            src: 'logo-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
             purpose: 'any maskable'
           }
         ]

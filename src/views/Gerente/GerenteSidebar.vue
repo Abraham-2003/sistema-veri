@@ -38,12 +38,22 @@
 
       <!-- Otras opciones -->
       <router-link
+        v-if="accesoReportes"
         to="/Gerente/Reporte"
         class="nav-link text-white py-2 px-3 rounded mb-1"
         active-class="bg-secondary"
       >
         Reportes Diarios
       </router-link>
+
+      <!-- Alternativa desactivada -->
+      <div
+        v-else
+        class="nav-link text-white py-2 px-3 rounded mb-1 bg-opacity-25 bg-dark text-muted"
+        style="cursor: not-allowed"
+      >
+        Reportes Diarios <span class="ms-2 small">(Disponible 9–11 y 18–20)</span>
+      </div>
 
       <router-link
         to="/Gerente/ReporteLab"
@@ -82,6 +92,13 @@ import { useRouter } from "vue-router";
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import perfilAbraham from "../../assets/fotoperfil.png";
 import { defineProps } from "vue";
+import { computed } from "vue";
+
+const hora = new Date().getHours();
+
+const accesoReportes = computed(() => {
+  return (hora >= 9 && hora < 11) || (hora >= 13 && hora < 20);
+});
 
 const props = defineProps({
   visible: Boolean,
