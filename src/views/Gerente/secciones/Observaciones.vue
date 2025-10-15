@@ -31,7 +31,7 @@ function enviar() {
     ></textarea>
 
     <button class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto mb-2" @click="enviar">
-      Enviar reporte
+      Enviar reporte 
     </button>
   </div>
 </template>

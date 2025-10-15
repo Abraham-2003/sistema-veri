@@ -70,7 +70,6 @@ function validarLineas() {
   });
 }
 
-// Inicializar estructura cuando props.lineas esté disponible
 watch(
   () => props.lineas,
   (lineas) => {

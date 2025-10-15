@@ -96,28 +96,32 @@
               <option value="Desactivado">Desactivado</option>
             </select>
             <hr />
-            <h6 class="mb-3">Microbanca</h6>
+<h6 class="mb-3">Microbanca por línea</h6>
 
-            <input
-              v-model="nuevo.microbanca.marca"
-              placeholder="Marca"
-              class="form-control mb-2"
-            />
-            <input
-              v-model="nuevo.microbanca.serie"
-              placeholder="Número de serie"
-              class="form-control mb-2"
-            />
-            <input
-              v-model="nuevo.microbanca.serieNox"
-              placeholder="Número de serie NOX"
-              class="form-control mb-2"
-            />
-            <input
-              v-model="nuevo.microbanca.serieOxigeno"
-              placeholder="Número de serie Oxígeno"
-              class="form-control mb-2"
-            />
+<div v-for="(linea, index) in nuevo.microbancaPorLinea" :key="index" class="mb-3 border rounded p-2">
+  <strong>Línea {{ index + 1 }}</strong>
+  <input
+    v-model="linea.marca"
+    placeholder="Marca"
+    class="form-control mb-2"
+  />
+  <input
+    v-model="linea.serie"
+    placeholder="Número de serie"
+    class="form-control mb-2"
+  />
+  <input
+    v-model="linea.serieNox"
+    placeholder="Número de serie NOX"
+    class="form-control mb-2"
+  />
+  <input
+    v-model="linea.serieOxigeno"
+    placeholder="Número de serie Oxígeno"
+    class="form-control mb-2"
+  />
+</div>
+
           </div>
           <div class="modal-footer">
             <button type="submit" class="btn btn-primary">Guardar</button>
@@ -132,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch} from "vue";
 import { db } from "../../servivces/auth.js";
 import { collection, getDocs, addDoc, updateDoc, doc, setDoc } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -145,12 +149,23 @@ const nuevo = ref({
   encargado: "",
   estatus: "Activo",
   lineaDual: "",
-  microbanca: {
-    marca: "",
-    serie: "",
-    serieNox: "",
-    serieOxigeno: "",
-  },
+  microbancaPorLinea: [],
+});
+
+watch(() => nuevo.value.lineas, (lineas) => {
+  const n = parseInt(lineas);
+  if (!isNaN(n)) {
+    nuevo.value.microbancaPorLinea = Array.from({ length: n }, (_, i) => {
+      return nuevo.value.microbancaPorLinea[i] || {
+        marca: "",
+        serie: "",
+        serieNox: "",
+        serieOxigeno: "",
+      };
+    });
+  } else {
+    nuevo.value.microbancaPorLinea = [];
+  }
 });
 
 const editando = ref(null);
@@ -203,12 +218,9 @@ const abrirModal = (centro = null) => {
       encargado: centro.encargado || "",
       estatus: centro.estatus || "Activo",
       lineaDual: centro.lineaDual || "",
-      microbanca: {
-        marca: centro.microbanca?.marca || "",
-        serie: centro.microbanca?.serie || "",
-        serieNox: centro.microbanca?.serieNox || "",
-        serieOxigeno: centro.microbanca?.serieOxigeno || "",
-      },
+      microbancaPorLinea: Array.isArray(centro.microbancaPorLinea)
+        ? centro.microbancaPorLinea
+        : [],
     };
     editando.value = centro.id;
   } else {
@@ -218,18 +230,14 @@ const abrirModal = (centro = null) => {
       encargado: "",
       estatus: "Activo",
       lineaDual: "",
-      microbanca: {
-        marca: "",
-        serie: "",
-        serieNox: "",
-        serieOxigeno: "",
-      },
+      microbancaPorLinea: [],
     };
     editando.value = null;
   }
 
   new bootstrap.Modal(document.getElementById("modalCentro")).show();
 };
+
 
 const desactivarCentro = async (centro) => {
   await updateDoc(doc(db, "centros", centro.id), { ...centro, estatus: "Desactivado" });
