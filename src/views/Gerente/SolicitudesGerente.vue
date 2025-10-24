@@ -57,23 +57,114 @@
             />
 
             <!-- Proveedor o laboratorio -->
+            <!-- Botón para abrir selector -->
             <div class="mb-3">
               <label class="form-label">Proveedor o Laboratorio</label>
-              <select v-model="solicitud.proveedor" class="form-select">
-                <option disabled value="">Selecciona proveedor o laboratorio</option>
+              <button
+                class="btn btn-outline-success w-100"
+                type="button"
+                @click="mostrarSelector = true"
+              >
+                {{ solicitud.proveedor ? solicitud.proveedor : "Seleccionar" }}
+              </button>
+            </div>
 
-                <optgroup label="Proveedores">
-                  <option v-for="p in proveedores" :key="p.id" :value="p.nombre">
-                    {{ p.nombre }}
-                  </option>
-                </optgroup>
+            <!-- Modal de selección -->
+            <div
+              class="modal fade show d-block"
+              v-if="mostrarSelector"
+              style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px)"
+            >
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div
+                  class="modal-content shadow-lg border-0 rounded-4 overflow-hidden animate-modal"
+                >
+                  <!-- Encabezado -->
+                  <div class="modal-header  ">
+                    <h5 class="modal-title">Selecciona un servicio o laboratorio</h5>
+                    <button
+                      type="button "
+                      class="btn-close "
+                      @click="mostrarSelector = false"
+                    ></button>
+                  </div>
 
-                <optgroup label="Laboratorios">
-                  <option v-for="l in laboratorios" :key="l.id" :value="l.nombre">
-                    {{ l.nombre }}
-                  </option>
-                </optgroup>
-              </select>
+                  <!-- Cuerpo -->
+                  <div class="modal-body p-3" style="max-height: 70vh; overflow-y: auto">
+                    <!-- Proveedores -->
+                    <h6 class="text-secondary mb-2">Proveedores</h6>
+                    <div
+                      v-for="p in proveedores"
+                      :key="p.id"
+                      class="card mb-2 border-0 shadow-sm hover-scale selectable"
+                      @click="seleccionarProveedor(p)"
+                    >
+                      <div class="card-body py-2 px-3">
+                        <strong>{{ p.nombre }}</strong>
+                        <p v-if="p.contacto" class="small text-muted mb-0">
+                          {{ p.contacto }}
+                        </p>
+                        <div
+                          v-if="p.servicios && p.servicios.length"
+                          class="mt-2 d-flex flex-wrap gap-2"
+                        >
+                          <span
+                            v-for="(serv, i) in p.servicios"
+                            :key="i"
+                            class="badge bg-light text-primary border"
+                          >
+                            {{ serv }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr class="my-3" />
+                    <!-- Laboratorios -->
+                    <h6 class="text-secondary mb-2">Laboratorios</h6>
+                    <div
+                      v-for="lab in laboratorios"
+                      :key="lab.id"
+                      class="card mb-3 border-0 shadow-sm hover-scale"
+                    >
+                      <div class="card-body">
+                        <h6 class="fw-bold text-success mb-2">{{ lab.nombre }}</h6>
+
+                        <p class="small text-muted mb-2">
+                          {{ lab.contacto || "Sin contacto" }}
+                        </p>
+
+                        <!-- Lista de servicios o áreas del laboratorio -->
+                        <div class="d-flex flex-wrap gap-2">
+                          <button
+                            v-for="(item, i) in lab.servicios || lab.datos"
+                            :key="i"
+                            class="btn btn-sm btn-outline-success rounded-pill"
+                            @click="
+                              seleccionarLaboratorio(
+                                lab.nombre,
+                                item.titulo || item.tipo || item
+                              )
+                            "
+                          >
+                            {{ item.titulo || item.tipo || item }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Pie -->
+                  <div class="modal-footer">
+                    <button
+                      class="btn btn-outline-secondary w-100"
+                      @click="mostrarSelector = false"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Fecha de solicitud -->
@@ -98,7 +189,7 @@
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button class="btn btn-primary" @click="guardarSolicitud">
+            <button class="btn btn-success" @click="guardarSolicitud">
               Guardar Solicitud
             </button>
           </div>
@@ -162,6 +253,21 @@ import {
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const modalRegistro = ref(null);
+const mostrarSelector = ref(false);
+
+const seleccionarProveedor = (proveedor) => {
+  solicitud.value.proveedor = proveedor.nombre;
+  mostrarSelector.value = false;
+  console.log("[✅ Seleccionado proveedor]", proveedor.nombre);
+};
+
+const seleccionarLaboratorio = (nombreLaboratorio, servicio) => {
+  solicitud.value.proveedor = servicio
+    ? `${nombreLaboratorio} - ${servicio}`
+    : nombreLaboratorio;
+  mostrarSelector.value = false;
+  console.log("[✅ Seleccionado laboratorio]", nombreLaboratorio, servicio);
+};
 
 const abrirModalRegistro = () => {
   const modalElement = document.getElementById("modalRegistro");
@@ -293,5 +399,26 @@ onMounted(() => {
 }
 .solicitud-card:hover {
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+}
+.hover-scale {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+.animate-modal {
+  animation: fadeInUp 0.25s ease-out;
+}
+@keyframes fadeInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 </style>

@@ -59,6 +59,10 @@ const routes = [
       {
         path: 'ConsultasAdmin',
         component: () => import('../views/Admin/ConsultasAdmin.vue')
+      },
+      {
+        path: 'OrdenServicio',
+        component: () => import('../views/Admin/OrdenServicio.vue')
       }
     ]
   },
@@ -87,6 +91,10 @@ const routes = [
       {
         path: 'Infraestructura',
         component: () => import('../views/Gerente/InfraestructuraGerente.vue'),
+      },
+      {
+        path: 'OrdenServicio',
+        component: () => import('../views/Gerente/OrdenServicio.vue'),
       }
     ]
   },
@@ -124,6 +132,14 @@ const routes = [
         path: 'Solicitudes',
         component: () => import('../views/Coordinador/CoordinadorSolicitudes.vue')
       },
+      {
+        path: 'Consultas',
+        component: () => import('../views/Coordinador/ConsultasCoordinador.vue')
+      },
+      {
+        path: 'OrdenServicio',
+        component: () => import('../views/Coordinador/OrdenServicio.vue')
+      }
       
     ]
   },

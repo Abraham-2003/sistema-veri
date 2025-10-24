@@ -1,7 +1,9 @@
 <template>
-  <div class="coordinador-layout">
+  <div class="d-flex min-vh-100">
     <CoordinadorSidebar />
+    <div class="flex-grow-1 p-4">
     <router-view />
+  </div>
   </div>
 </template>
 

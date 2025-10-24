@@ -13,7 +13,7 @@
             <div>
               <div class="text-primary fw-semibold mb-1">Próximo vencimiento</div>
               <div class="small text-muted">
-                {{ vencimientoProximo?.nombre || "—" }} vence el
+                {{ vencimientoProximo?.nombre || "—" }}
                 <strong>{{ vencimientoProximo?.fecha || "—" }}</strong>
               </div>
             </div>
@@ -164,19 +164,26 @@ async function cargarVencimientos() {
     }
   });
 
-  const ordenados = vencimientos
-    .filter((lab) => lab.fechaVencimiento)
-    .sort((a, b) => a.fechaVencimiento - b.fechaVencimiento);
+const hoy = dayjs().startOf("day");
 
-  if (ordenados.length) {
-    const primero = ordenados[0];
-    vencimientoProximo.value = {
-      nombre: primero.nombre,
-      fecha: dayjs(primero.fechaVencimiento).format("DD MMMM"),
-    };
-  } else {
-    console.log("[✅ No hay vencimientos registrados]");
-  }
+const ordenados = vencimientos
+  .filter((lab) => lab.fechaVencimiento && dayjs(lab.fechaVencimiento).isAfter(hoy)) // 👉 solo fechas futuras
+  .sort((a, b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento));
+
+if (ordenados.length) {
+  const primero = ordenados[0];
+  vencimientoProximo.value = {
+    nombre: primero.nombre,
+    fecha: dayjs(primero.fechaVencimiento).format("DD [de] MMMM"),
+  };
+} else {
+  vencimientoProximo.value = {
+    nombre: "Sin próximos vencimientos",
+    fecha: "-",
+  };
+  console.log("[✅ No hay próximos vencimientos]");
+}
+
 
   eventosLaboratorio.value = ordenados
     .map((lab) => {

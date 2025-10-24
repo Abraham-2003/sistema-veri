@@ -7,7 +7,7 @@
     <div class="modal fade" id="modalLab" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" @submit.prevent="guardarReporteLab">
-          <div class="modal-header bg-success bg-opacity-10">
+          <div class="modal-headers bg-opacity-10">
             <h6 class="modal-title">Agregar reporte</h6>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>

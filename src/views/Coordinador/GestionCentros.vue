@@ -2,7 +2,7 @@
   <div class="container py-4">
     <h3 class="mb-4">Gestión de Centros</h3>
 
-    <button class="btn btn-success mb-3" @click="abrirModal()">➕ Nuevo Centro</button>
+    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo Centro</button>
 
     <!-- Tabla -->
     <table class="table table-bordered table-hover">

@@ -70,7 +70,13 @@
       >
         Registrar Solicitudes
       </router-link>
-
+      <router-link
+        to="/Gerente/OrdenServicio"
+        class="nav-link text-white py-2 px-3 rounded mb-1"
+        active-class="bg-secondary"
+      >
+        Orden de servicio
+      </router-link>
       <router-link
         to="/Gerente/Infraestructura"
         class="nav-link text-white py-2 px-3 rounded mb-1"

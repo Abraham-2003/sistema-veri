@@ -2,7 +2,7 @@
   <div class="container py-4">
     <h3 class="mb-4">Gestión de Proveedores</h3>
 
-    <button class="btn btn-success mb-3" @click="abrirModal()">➕ Nuevo proveedor</button>
+    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo proveedor</button>
 
     <!-- Tabla -->
     <table class="table table-bordered table-hover">

@@ -59,75 +59,140 @@
 
     <!-- Modal -->
     <div class="modal fade" id="modalCentro" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
-        <form class="modal-content" @submit.prevent="guardarCentro">
-          <div class="modal-header">
-            <h5 class="modal-title">{{ editando ? "Editar Centro" : "Nuevo Centro" }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form
+          class="modal-content shadow-lg border-0 rounded-4"
+          @submit.prevent="guardarCentro"
+        >
+          <div class="modal-header bg-primary text-white rounded-top-4">
+            <h5 class="modal-title fw-semibold mb-0">
+              {{ editando ? "Editar Centro" : "Nuevo Centro" }}
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+            ></button>
           </div>
-          <div class="modal-body">
-            <input
-              v-model="nuevo.ubicacion"
-              placeholder="Ubicación"
-              class="form-control mb-2"
-            />
-            <input
-              v-model="nuevo.lineas"
-              placeholder="Número de líneas"
-              type="number"
-              class="form-control mb-2"
-            />
-            <select v-model="nuevo.lineaDual" class="form-select mb-2">
-              <option disabled value="">Selecciona la línea dual</option>
-              <option v-for="n in parseInt(nuevo.lineas) || 0" :key="n" :value="n">
-                Línea {{ n }}
-              </option>
-            </select>
 
-            <select v-model="nuevo.encargado" class="form-select mb-2">
-              <option disabled value="">Selecciona un encargado</option>
-              <option v-for="gerente in gerentes" :key="gerente.id" :value="gerente.id">
-                {{ gerente.nombre }}
-              </option>
-            </select>
+          <div class="modal-body p-4">
+            <h6 class="fw-bold text-secondary mb-3">Información general</h6>
 
-            <select v-model="nuevo.estatus" class="form-select mb-2">
-              <option value="Activo">Activo</option>
-              <option value="Desactivado">Desactivado</option>
-            </select>
-            <hr />
-<h6 class="mb-3">Microbanca por línea</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Ubicación</label>
+                <input
+                  v-model="nuevo.ubicacion"
+                  placeholder="Ej. Zona Norte"
+                  class="form-control"
+                />
+              </div>
 
-<div v-for="(linea, index) in nuevo.microbancaPorLinea" :key="index" class="mb-3 border rounded p-2">
-  <strong>Línea {{ index + 1 }}</strong>
-  <input
-    v-model="linea.marca"
-    placeholder="Marca"
-    class="form-control mb-2"
-  />
-  <input
-    v-model="linea.serie"
-    placeholder="Número de serie"
-    class="form-control mb-2"
-  />
-  <input
-    v-model="linea.serieNox"
-    placeholder="Número de serie NOX"
-    class="form-control mb-2"
-  />
-  <input
-    v-model="linea.serieOxigeno"
-    placeholder="Número de serie Oxígeno"
-    class="form-control mb-2"
-  />
-</div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">N° de líneas</label>
+                <input
+                  v-model="nuevo.lineas"
+                  type="number"
+                  placeholder="Ej. 3"
+                  class="form-control"
+                />
+              </div>
 
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Línea dual</label>
+                <select v-model="nuevo.lineaDual" class="form-select">
+                  <option disabled value="">Selecciona</option>
+                  <option v-for="n in parseInt(nuevo.lineas) || 0" :key="n" :value="n">
+                    Línea {{ n }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Encargado</label>
+                <select v-model="nuevo.encargado" class="form-select">
+                  <option disabled value="">Selecciona un encargado</option>
+                  <option
+                    v-for="gerente in gerentes"
+                    :key="gerente.id"
+                    :value="gerente.id"
+                  >
+                    {{ gerente.nombre }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Estatus</label>
+                <select v-model="nuevo.estatus" class="form-select">
+                  <option value="Activo">Activo</option>
+                  <option value="Desactivado">Desactivado</option>
+                </select>
+              </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h6 class="fw-bold text-secondary mb-3">Microbanca por línea</h6>
+
+            <div
+              v-for="(linea, index) in nuevo.microbancaPorLinea"
+              :key="index"
+              class="border rounded-3 p-3 mb-3 bg-light"
+            >
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-primary">Línea {{ index + 1 }}</strong>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">Marca</label>
+                  <input v-model="linea.marca" placeholder="Marca" class="form-control" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">N° de serie</label>
+                  <input
+                    v-model="linea.serie"
+                    placeholder="Serie principal"
+                    class="form-control"
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">N° de serie NOX</label>
+                  <input
+                    v-model="linea.serieNox"
+                    placeholder="Serie NOX"
+                    class="form-control"
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">N° de serie Oxígeno</label>
+                  <input
+                    v-model="linea.serieOxigeno"
+                    placeholder="Serie Oxígeno"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+              <div class="col-md-6" v-if="nuevo.lineaDual == index + 1">
+                <label class="form-label small fw-semibold">Opacímetro</label>
+                <input
+                  v-model="linea.opacimetro"
+                  placeholder="Serie del opacímetro"
+                  class="form-control"
+                />
+              </div>
+            </div>
           </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guardar</button>
+
+          <div class="modal-footer bg-light rounded-bottom-4">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancelar
             </button>
+            <button type="submit" class="btn btn-primary px-4">Guardar</button>
           </div>
         </form>
       </div>
@@ -136,7 +201,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch} from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { db } from "../../servivces/auth.js";
 import { collection, getDocs, addDoc, updateDoc, doc, setDoc } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -152,21 +217,32 @@ const nuevo = ref({
   microbancaPorLinea: [],
 });
 
-watch(() => nuevo.value.lineas, (lineas) => {
-  const n = parseInt(lineas);
-  if (!isNaN(n)) {
-    nuevo.value.microbancaPorLinea = Array.from({ length: n }, (_, i) => {
-      return nuevo.value.microbancaPorLinea[i] || {
-        marca: "",
-        serie: "",
-        serieNox: "",
-        serieOxigeno: "",
-      };
-    });
-  } else {
-    nuevo.value.microbancaPorLinea = [];
+watch(
+  () => nuevo.value.lineas,
+  (lineas) => {
+    const n = parseInt(lineas);
+    if (!isNaN(n)) {
+      nuevo.value.microbancaPorLinea = Array.from({ length: n }, (_, i) => {
+        const existente = nuevo.value.microbancaPorLinea[i] || {};
+        const base = {
+          marca: existente.marca || "",
+          serie: existente.serie || "",
+          serieNox: existente.serieNox || "",
+          serieOxigeno: existente.serieOxigeno || "",
+        };
+
+        // Si esta línea es la línea dual, incluir opacimetro
+        if (nuevo.value.lineaDual == i + 1) {
+          base.opacimetro = existente.opacimetro || "";
+        }
+
+        return base;
+      });
+    } else {
+      nuevo.value.microbancaPorLinea = [];
+    }
   }
-});
+);
 
 const editando = ref(null);
 const paginaActual = ref(1);
@@ -238,7 +314,6 @@ const abrirModal = (centro = null) => {
   new bootstrap.Modal(document.getElementById("modalCentro")).show();
 };
 
-
 const desactivarCentro = async (centro) => {
   await updateDoc(doc(db, "centros", centro.id), { ...centro, estatus: "Desactivado" });
   cargarCentros();
@@ -255,3 +330,20 @@ onMounted(() => {
   cargarGerentes();
 });
 </script>
+<style scoped>
+.modal-content {
+  transition: all 0.3s ease-in-out;
+}
+.modal-header {
+  border-bottom: none;
+}
+.modal-footer {
+  border-top: none;
+}
+.form-label {
+  color: #495057;
+}
+.bg-light {
+  background-color: #f8f9fa !important;
+}
+</style>

@@ -88,7 +88,13 @@
       >
         Solicitudes
       </router-link>
-
+      <router-link
+        to="/Administrador/OrdenServicio"
+        class="nav-link text-white py-2 px-3 rounded mb-1"
+        active-class="bg-secondary"
+      >
+        Ordenes de servicio
+      </router-link>
       <router-link
         to="/Administrador/Infraestructura"
         class="nav-link text-white py-2 px-3 rounded mb-1"
