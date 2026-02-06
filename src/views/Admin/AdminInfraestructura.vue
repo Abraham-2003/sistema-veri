@@ -1,85 +1,132 @@
 <template>
   <div class="container py-4">
-    <h3 class="mb-4">Estado de Infraestructura</h3>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-semibold mb-0">Estado de Infraestructura</h3>
+      <button class="btn btn-primary btn-sm" @click="abrirModal()">
+        + Nuevo elemento
+      </button>
+    </div>
 
-    <!-- Filtro por centro -->
-    <select v-model="filtroCentro" class="form-select mb-3">
-      <option value="">Todos los centros</option>
-      <option v-for="centro in centros" :key="centro.id" :value="centro.id">
-        {{ centro.ubicacion }}
-      </option>
-    </select>
-
-    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo elemento</button>
+    <!-- Filtro -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <select v-model="filtroCentro" class="form-select form-select-sm">
+          <option value="">Todos los centros</option>
+          <option v-for="centro in centros" :key="centro.id" :value="centro.id">
+            {{ centro.ubicacion }}
+          </option>
+        </select>
+      </div>
+    </div>
 
     <!-- Tabla -->
-    <table class="table table-bordered table-hover">
-      <thead class="table-dark">
-        <tr>
-          <th>Elemento</th>
-          <th>Estatus</th>
-          <th>Áreas con falla</th>
-          <th>Última Revisión</th>
-          <th>Observaciones</th>
-          <th>Centro</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in infraestructuraPaginados" :key="item.id">
-          <td>{{ item.elemento }}</td>
-          <td :class="item.estatus === 'Operativo' ? 'text-success' : 'text-danger'">
-            {{ item.estatus }}
-          </td>
-          <td>
-            <span
-              v-for="(area, index) in item.areasConFalla || []"
-              :key="index"
-              class="badge bg-danger me-1"
-            >
-              {{ area }}
-            </span>
-            <span
-              v-if="!item.areasConFalla || item.areasConFalla.length === 0"
-              class="text-muted"
-            >
-              Sin fallas
-            </span>
-          </td>
+    <div class="table-responsive">
+      <table class="table infra-table">
+        <thead>
+          <tr>
+            <th>Elemento</th>
+            <th>Estatus</th>
+            <th>Áreas con falla</th>
+            <th class="d-none d-md-table-cell">Última revisión</th>
+            <th class="d-none d-lg-table-cell">Observaciones</th>
+            <th class="d-none d-md-table-cell">Centro</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
 
-          <td>{{ item.ultimaRevision }}</td>
-          <td>{{ item.observaciones }}</td>
-          <td>{{ obtenerNombreCentro(item.centroId) }}</td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModal(item)">
-              Editar
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        <tbody>
+          <tr v-for="item in infraestructuraPaginados" :key="item.id">
+            <td class="fw-medium">{{ item.elemento }}</td>
 
-    <nav>
-      <ul class="pagination">
+            <td>
+              <span
+                class="status-pill"
+                :class="item.estatus === 'Operativo' ? 'ok' : 'fail'"
+              >
+                {{ item.estatus }}
+              </span>
+            </td>
+
+            <td>
+              <div class="d-flex flex-wrap gap-1">
+                <span
+                  v-for="(area, index) in item.areasConFalla || []"
+                  :key="index"
+                  class="badge area-badge"
+                >
+                  {{ area }}
+                </span>
+                <span
+                  v-if="!item.areasConFalla || item.areasConFalla.length === 0"
+                  class="text-muted small"
+                >
+                  Sin fallas
+                </span>
+              </div>
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ item.ultimaRevision }}
+            </td>
+
+            <td class="d-none d-lg-table-cell text-truncate obs-cell">
+              {{ item.observaciones || '—' }}
+            </td>
+
+            <td class="d-none d-md-table-cell">
+              {{ obtenerNombreCentro(item.centroId) }}
+            </td>
+
+            <td class="text-end">
+              <div class="action-buttons">
+                <button
+                  class="btn btn-light btn-sm"
+                  @click="abrirModal(item)"
+                  title="Editar"
+                >
+                  ✏️
+                </button>
+                <button
+                  class="btn btn-light btn-sm text-danger"
+                  @click="eliminarInfraestructura(item)"
+                  title="Eliminar"
+                >
+                  🗑
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <nav class="mt-3">
+      <ul class="pagination pagination-sm justify-content-end">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
           <button class="page-link" @click="paginaActual--">Anterior</button>
         </li>
+
         <li
           class="page-item"
           v-for="n in totalPaginas"
           :key="n"
           :class="{ active: paginaActual === n }"
         >
-          <button class="page-link" @click="paginaActual = n">{{ n }}</button>
+          <button class="page-link" @click="paginaActual = n">
+            {{ n }}
+          </button>
         </li>
+
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
           <button class="page-link" @click="paginaActual++">Siguiente</button>
         </li>
       </ul>
     </nav>
+
     <!-- Modal -->
     <div class="modal fade" id="modalInfra" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" @submit.prevent="guardarInfraestructura">
           <div class="modal-header">
             <h5 class="modal-title">
@@ -87,18 +134,20 @@
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
+
           <div class="modal-body">
             <input
               v-model="nuevo.elemento"
               placeholder="Elemento"
-              class="form-control mb-2"
+              class="form-control form-control-sm mb-3"
             />
-            <label class="form-label">Áreas asignadas</label>
-            <br>
+
+            <label class="form-label small">Áreas asignadas</label>
+
             <div
               v-for="(area, index) in nuevo.areas"
               :key="index"
-              class="input-group mb-2"
+              class="input-group input-group-sm mb-2"
             >
               <input
                 v-model="nuevo.areas[index]"
@@ -106,18 +155,22 @@
                 class="form-control"
                 placeholder="Área"
               />
-              <button class="btn btn-outline-danger" @click.prevent="eliminarArea(index)">
-                Borrar
+              <button
+                class="btn btn-outline-danger"
+                @click.prevent="eliminarArea(index)"
+              >
+                ✕
               </button>
             </div>
+
             <button
-              class="btn btn-outline-primary btn-sm mb-3"
+              class="btn btn-outline-secondary btn-sm mb-3"
               @click.prevent="agregarArea"
             >
-              Agregar área
+              + Agregar área
             </button>
 
-            <select v-model="nuevo.estatus" class="form-select mb-2">
+            <select v-model="nuevo.estatus" class="form-select form-select-sm mb-3">
               <option value="Operativo">Operativo</option>
               <option value="Fuera de servicio">Fuera de servicio</option>
             </select>
@@ -125,19 +178,27 @@
             <textarea
               v-model="nuevo.observaciones"
               placeholder="Observaciones"
-              class="form-control mb-2"
+              class="form-control form-control-sm mb-3"
             />
 
-            <select v-model="nuevo.centroId" class="form-select mb-2">
+            <select
+              v-model="nuevo.centroId"
+              class="form-select form-select-sm"
+            >
               <option disabled value="">Selecciona un centro</option>
               <option v-for="centro in centros" :key="centro.id" :value="centro.id">
                 {{ centro.ubicacion }}
               </option>
             </select>
           </div>
+
           <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guardar</button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              data-bs-dismiss="modal"
+            >
               Cancelar
             </button>
           </div>
@@ -150,7 +211,15 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { db } from "../../servivces/auth.js";
-import { collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
+import Swal from "sweetalert2";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const infraestructura = ref([]);
@@ -173,6 +242,42 @@ const agregarArea = () => {
 
 const eliminarArea = (index) => {
   nuevo.value.areas.splice(index, 1);
+};
+
+const eliminarInfraestructura = async (item) => {
+  const result = await Swal.fire({
+    title: "¿Eliminar elemento?",
+    text: `Se eliminará "${item.elemento}" de forma permanente.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#dc3545",
+    cancelButtonColor: "#6c757d",
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await deleteDoc(doc(db, "infraestructura", item.id));
+
+    Swal.fire({
+      icon: "success",
+      title: "Eliminado",
+      text: "El elemento fue eliminado correctamente.",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    cargarInfraestructura();
+  } catch (error) {
+    console.error("[Error al eliminar infraestructura]", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No se pudo eliminar el elemento.",
+    });
+  }
 };
 
 const cargarInfraestructura = async () => {
@@ -246,3 +351,66 @@ onMounted(() => {
   cargarCentros();
 });
 </script>
+<style scoped>
+.infra-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.infra-table thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.infra-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.infra-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.infra-table td {
+  vertical-align: middle;
+  border-top: none;
+}
+
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-pill.ok {
+  background: #e6f4ea;
+  color: #198754;
+}
+
+.status-pill.fail {
+  background: #fdecea;
+  color: #dc3545;
+}
+
+.area-badge {
+  background: #f1f3f5;
+  color: #495057;
+  font-size: 0.7rem;
+}
+
+.action-buttons {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.obs-cell {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

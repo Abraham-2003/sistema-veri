@@ -42,13 +42,33 @@
           >
             {{ sol.estatus }}
           </td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModalEdicion(sol)">
-              Editar
-            </button>
-            <button class="btn btn-danger btn-sm" @click="eliminarSolicitud(sol.id)">
-              Eliminar
-            </button>
+          <td class="text-center">
+            <div class="d-inline-flex gap-2">
+              <button
+                class="btn btn-outline-warning btn-sm"
+                @click="abrirModalEdicion(sol)"
+                title="Editar"
+              >
+                <i class="bi bi-pencil-square"></i>
+              </button>
+
+              <button
+                class="btn btn-outline-danger btn-sm"
+                @click="eliminarSolicitud(sol.id)"
+                title="Eliminar"
+              >
+                <i class="bi bi-trash"></i>
+              </button>
+
+              <a
+                :href="generarLinkWhatsApp(sol)"
+                target="_blank"
+                class="btn btn-success btn-sm"
+                title="Enviar WhatsApp"
+              >
+                <i class="bi bi-whatsapp"></i>
+              </a>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -231,6 +251,27 @@ const totalPaginas = computed(() => {
     : solicitudes.value;
   return Math.ceil(filtradas.length / porPagina);
 });
+
+const generarMensajeWhatsApp = (sol) => {
+  if (!sol) return "⚠️ Solicitud no disponible";
+
+  return (
+    `*Solicitud de ${sol.tipo}*\n\n` +
+    `*Centro:* ${nombreCentro(sol.centroId)}\n` +
+    `*Elemento:* ${sol.elemento}\n` +
+    `*Proveedor:* ${sol.proveedor}\n` +
+    `*Fecha de solicitud:* ${sol.fechaSolicitud || "N/A"}\n` +
+    `*Fecha de pago:* ${sol.fechaPago || "N/A"}\n` +
+    `*Fecha de entrega:* ${sol.fechaEntrega || "N/A"}\n` +
+    `*Observaciones:* ${sol.observaciones || "Sin observaciones"}\n` +
+    `*Estatus:* ${sol.estatus}`
+  );
+};
+
+const generarLinkWhatsApp = (sol) => {
+  const mensaje = generarMensajeWhatsApp(sol);
+  return `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+};
 
 onMounted(() => {
   cargarCentros();

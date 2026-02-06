@@ -3,7 +3,7 @@
     <h3>Consulta Histórica de Gases</h3>
     <label class="form-label">Centro</label>
     <select v-model="centroSeleccionado" class="form-select mb-3">
-      <option disabled value="">Selecciona un centro</option>
+      <option value="">Selecciona un centro</option>
       <option v-for="centro in centros" :key="centro.id" :value="centro.id">
         {{ centro.nombre }}
       </option>
@@ -15,7 +15,6 @@
       <button class="btn btn-primary" @click="consultarReportes">Consultar</button>
     </div>
 
-    <!-- Tabs -->
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-3">
       <li class="nav-item">
@@ -182,7 +181,7 @@ async function consultarReportes() {
   reportesFiltrados.value = snapshot.docs.map((doc) => {
     const data = doc.data();
 
-    const gasesUsoRaw = data.gases?.gasesUso ?? {};
+    const gasesUsoRaw = data.gases?.uso ?? {};
     const gasesUso = Object.values(gasesUsoRaw).flat();
     const lineasRaw = data.lineas ?? {};
     const lineas = Object.entries(lineasRaw).map(([numero, info]) => ({

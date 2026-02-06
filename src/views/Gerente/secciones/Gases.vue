@@ -85,21 +85,28 @@
         class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto mb-2"
         @click="emitirSiguiente"
       >
-        Compresor <i class="bi bi-arrow-right-circle me-2"></i>
+        Imágenes <i class="bi bi-arrow-right-circle me-2"></i>
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, defineEmits, watch } from "vue";
+import { ref, defineProps, defineEmits } from "vue";
 import Swal from "sweetalert2";
 
-const emit = defineEmits(["siguiente"]);
+const props = defineProps({
+  modelValue: {
+    type: Object,
+    default: () => ({ uso: {}, stock: {} }),
+  },
+});
+const emit = defineEmits(["update:modelValue", "siguiente"]);
+
 const tabs = ["Baja", "Media", "Cero"];
 const activeTab = ref("Baja");
 
-// Estructura organizada por tipo
+// Estado local inicial
 const gasesUso = ref({
   Baja: [
     {
@@ -166,37 +173,21 @@ const gasesStock = ref({
   ],
 });
 
+// Validación: todos los campos llenos
 function validarTodosLosCampos() {
-  const todasLasTabs = tabs;
-
-  return todasLasTabs.every((tab) => {
+  return tabs.every((tab) => {
     const uso = gasesUso.value[tab];
     const stock = gasesStock.value[tab];
-
-    const todosLlenos = [...uso, ...stock].every((gas) => {
-      return gas.serie.trim() !== "" && gas.psi !== "" && gas.estatus.trim() !== "";
-    });
-
-    return todosLlenos;
+    return [...uso, ...stock].every(
+      (gas) =>
+        gas.serie.trim() !== "" &&
+        gas.psi !== "" &&
+        gas.psi !== null &&
+        gas.psi !== undefined &&
+        gas.estatus.trim() !== ""
+    );
   });
 }
-
-// Guardado en localStorage
-watch(
-  gasesUso,
-  (nuevo) => {
-    localStorage.setItem("gasesUsoTemp", JSON.stringify(nuevo));
-  },
-  { deep: true }
-);
-
-watch(
-  gasesStock,
-  (nuevo) => {
-    localStorage.setItem("gasesStockTemp", JSON.stringify(nuevo));
-  },
-  { deep: true }
-);
 
 function emitirSiguiente() {
   if (!validarTodosLosCampos()) {
@@ -213,12 +204,8 @@ function emitirSiguiente() {
     return;
   }
 
-  localStorage.setItem("gasesUsoTemp", JSON.stringify(gasesUso.value));
-  localStorage.setItem("gasesStockTemp", JSON.stringify(gasesStock.value));
-
-  emit("siguiente", {
-    gasesUso: gasesUso.value,
-    gasesStock: gasesStock.value,
-  });
+  // Emitir al padre con v-model
+  emit("update:modelValue", { uso: gasesUso.value, stock: gasesStock.value });
+  emit("siguiente");
 }
 </script>

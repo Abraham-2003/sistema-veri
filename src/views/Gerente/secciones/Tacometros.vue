@@ -1,107 +1,154 @@
 <template>
-  <div>
+  <div class="p-3">
     <h6 class="text-center mb-3 text-success">Tacómetros</h6>
 
-    <div v-for="(linea, index) in lineas" :key="index" class="card mb-3 shadow-sm">
+    <div v-for="linea in lineas" :key="linea" class="card mb-3 shadow-sm">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="card-title mb-0">Línea {{ linea }}</h6>
-          <div class="form-check">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              :id="`selectAll-${linea}`"
-              :checked="todosMarcados(linea)"
-              @change="toggleLinea(linea)"
-            />
-            <label class="form-check-label" :for="`selectAll-${linea}`">
-              Seleccionar todas
-            </label>
-          </div>
+        <h6 class="card-title">
+          Línea {{ linea }}
+          <span v-if="linea === lineaDual" class="badge bg-primary ms-2"> Dual </span>
+        </h6>
+
+        <!-- Seleccionar todos (solo campos base) -->
+        <div class="form-check mb-2">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            :id="`selectAll-${linea}`"
+            :checked="todosMarcados(linea)"
+            @change="toggleLinea(linea)"
+          />
+          <label class="form-check-label" :for="`selectAll-${linea}`">
+            Seleccionar todos
+          </label>
         </div>
 
-        <div v-for="campo in campos" :key="campo" class="form-check mb-2">
+        <!-- Campos base -->
+        <div v-for="campo in camposBase" :key="campo" class="form-check mb-2">
           <input
             class="form-check-input"
             type="checkbox"
             :id="`check-${linea}-${campo}`"
-            v-model="datosTacometros[linea][campo]"
+            v-model="localTacometros[linea][campo]"
           />
           <label class="form-check-label" :for="`check-${linea}-${campo}`">
             {{ campo }}
           </label>
         </div>
 
-        <div class="mb-2">
+        <!-- Campos SOLO línea dual -->
+        <div v-if="localTacometros[linea].especiales" class="border-top pt-3 mt-3">
+          <div v-for="campo in camposLineaDual" :key="campo" class="form-check mb-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              :id="`check-${linea}-especial-${campo}`"
+              v-model="localTacometros[linea].especiales[campo]"
+            />
+            <label class="form-check-label" :for="`check-${linea}-especial-${campo}`">
+              {{ campo }}
+            </label>
+          </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="mt-3">
           <label class="form-label">Observaciones</label>
           <textarea
-            v-model="datosTacometros[linea].observaciones"
+            v-model="localTacometros[linea].observaciones"
             class="form-control"
             rows="2"
           ></textarea>
         </div>
       </div>
     </div>
-    <div class="text-center">
+
+    <div class="text-center mt-4">
       <button
-        class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto mb-2"
+        class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto"
         @click="emitirSiguiente"
       >
-        Finalizar <i class="bi bi-arrow-right-circle me-2"></i>
+        Finalizar <i class="bi bi-arrow-right-circle ms-2"></i>
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch } from "vue";
+import { ref, watch, defineProps, defineEmits } from "vue";
+import Swal from "sweetalert2";
 
 const props = defineProps({
-  lineas: Array,
+  lineas: { type: Array, default: () => [] },
+  lineaDual: { type: Number, default: null },
+  modelValue: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(["siguiente"]);
+const emit = defineEmits(["update:modelValue", "siguiente"]);
 
-const campos = ["OBD", "Pinza", "Batería", "Contacto", "Encendedor"];
-const datosTacometros = ref({});
-function todosMarcados(linea) {
-  return campos.every((campo) => datosTacometros.value[linea]?.[campo]);
-}
+const camposBase = ["OBD", "Pinza", "Batería", "Contacto", "Encendedor"];
+const camposLineaDual = ["Tacómetro óptico", "Termocopla"];
 
-function toggleLinea(linea) {
-  const estado = !todosMarcados(linea);
-  campos.forEach((campo) => {
-    datosTacometros.value[linea][campo] = estado;
-  });
-}
+const localTacometros = ref({});
 
-// Esperar a que props.lineas esté disponible
+// Inicializar datos por línea
 watch(
-  () => props.lineas,
-  (lineas) => {
-    if (Array.isArray(lineas)) {
-      lineas.forEach((linea) => {
-        datosTacometros.value[linea] = { observaciones: "" };
-        campos.forEach((campo) => {
-          datosTacometros.value[linea][campo] = false;
-        });
+  () => [props.lineas, props.lineaDual],
+  ([lineas, lineaDual]) => {
+    if (!Array.isArray(lineas)) return;
+
+    const nuevo = {};
+
+    lineas.forEach((linea) => {
+      nuevo[linea] = {
+        observaciones: "",
+      };
+
+      // Campos base (todas las líneas)
+      camposBase.forEach((campo) => {
+        nuevo[linea][campo] = false;
       });
-      console.log("[✅ Tacómetros inicializados]", datosTacometros.value);
-    } else {
-      console.warn("[⚠️ props.lineas no es un array]", lineas);
-    }
+
+      // Campos EXTRA solo para línea dual
+      if (linea === lineaDual) {
+        nuevo[linea].especiales = {};
+        camposLineaDual.forEach((campo) => {
+          nuevo[linea].especiales[campo] = false;
+        });
+      } else {
+        nuevo[linea].especiales = null;
+      }
+    });
+
+    localTacometros.value = nuevo;
   },
   { immediate: true }
 );
+
+// Sincronizar con el padre
 watch(
-  datosTacometros,
+  localTacometros,
   (nuevo) => {
-    localStorage.setItem("tacometrosTemp", JSON.stringify(nuevo));
+    emit("update:modelValue", nuevo);
   },
   { deep: true }
 );
 
+function todosMarcados(linea) {
+  return camposBase.every(
+    (campo) => localTacometros.value[linea]?.[campo]
+  )
+}
+
+function toggleLinea(linea) {
+  const estado = !todosMarcados(linea)
+  camposBase.forEach((campo) => {
+    localTacometros.value[linea][campo] = estado
+  })
+}
+
+
 function emitirSiguiente() {
-  emit("siguiente", datosTacometros.value);
+  emit("siguiente");
 }
 </script>

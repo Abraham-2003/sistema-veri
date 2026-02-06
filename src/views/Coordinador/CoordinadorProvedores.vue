@@ -11,7 +11,6 @@
           <th>Nombre</th>
           <th>Contacto</th>
           <th>Servicio</th>
-          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -19,9 +18,7 @@
           <td>{{ prov.nombre }}</td>
           <td>{{ prov.contacto }}</td>
           <td>{{ prov.servicio }}</td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModal(prov)">Editar</button>
-          </td>
+          
         </tr>
       </tbody>
     </table>

@@ -25,7 +25,7 @@
             <th>Dictamen</th>
             <th>Vencimiento</th>
             <th>Centro</th>
-            <th>Acciones</th>
+            
             <!-- Nueva columna -->
           </tr>
         </thead>
@@ -38,20 +38,6 @@
             <td>{{ formatoFecha(reporte.dictamen) }}</td>
             <td>{{ formatoFecha(reporte.vencimiento) }}</td>
             <td>{{ nombreCentro(reporte.centroId) }}</td>
-            <td>
-              <button
-                class="btn btn-warning btn-sm me-2"
-                @click="abrirModalEdicion(reporte)"
-              >
-                Editar
-              </button>
-              <button
-                class="btn btn-danger btn-sm"
-                @click="eliminarReporte(reporte.id)"
-              >
-                Eliminar
-              </button>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -71,96 +57,30 @@
         </li>
       </ul>
     </nav>
-    <div class="modal fade" id="modalEdicion" tabindex="-1" aria-labelledby="modalEdicionLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalEdicionLabel">Editar reporte</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2">
-          <label class="form-label">Tipo</label>
-          <input v-model="reporteEditado.tipo" type="text" class="form-control" />
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Folio</label>
-          <input v-model="reporteEditado.folio" type="text" class="form-control" />
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Dictamen</label>
-          <input v-model="reporteEditado.dictamen" type="date" class="form-control" />
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Vencimiento</label>
-          <input v-model="reporteEditado.vencimiento" type="date" class="form-control" />
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-success" @click="guardarCambiosReporte">Guardar cambios</button>
-      </div>
-    </div>
-  </div>
-</div>
-
   </div>
 </template>
 <script setup>
-import { ref, onMounted, computed,  } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { db } from "../../servivces/auth.js";
-import { collection, getDocs, query, orderBy, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const reportesLab = ref([]);
 const centros = ref([]);
 const centroSeleccionado = ref("");
 const paginaActual = ref(1);
-const porPagina = 10;
+const porPagina = 20;
 const reporteEditado = ref({});
 const modal = ref(null);
 
-const abrirModalEdicion = (reporte) => {
-  console.log("[✏️ Editar reporte]", reporte);
-  reporteEditado.value = { ...reporte };
-
-  const modalElement = document.getElementById("modalEdicion");
-  if (modalElement) {
-    modal.value = new bootstrap.Modal(modalElement);
-    modal.value.show();
-  } else {
-    console.warn("[⚠️ No se encontró el elemento del modal]");
-  }
-};
-
-const guardarCambiosReporte = async () => {
-  try {
-    const { id, ...datosActualizados } = reporteEditado.value;
-    await updateDoc(doc(db, "ReporteLab", id), datosActualizados);
-    console.log("[✅ Reporte actualizado]", id);
-
-    if (modal.value) {
-      modal.value.hide();
-    }
-
-    await cargarReportesLab(); // Recarga la lista
-  } catch (error) {
-    console.error("[❌ Error al actualizar reporte]", error);
-  }
-};
-
-const eliminarReporte = async (id) => {
-  const confirmacion = confirm("¿Estás seguro de que deseas eliminar este reporte?");
-  if (!confirmacion) return;
-
-  try {
-    await deleteDoc(doc(db, "ReporteLab", id));
-    console.log("[🗑️ Reporte eliminado]", id);
-    await cargarReportesLab();
-  } catch (error) {
-    console.error("[❌ Error al eliminar reporte]", error);
-  }
-};
 const cargarReportesLab = async () => {
   const snapshot = await getDocs(
     query(collection(db, "ReporteLab"), orderBy("dictamen", "desc"))

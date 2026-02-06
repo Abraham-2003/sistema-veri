@@ -1,22 +1,30 @@
 <script setup>
-import { ref } from 'vue'
-import dayjs from 'dayjs'
-
+import { ref } from "vue";
+import dayjs from "dayjs";
 
 // Declarar la variable reactiva
-const observaciones = ref('')
+const observaciones = ref("");
 
 // Definir el evento que se emitirá al padre
-const emit = defineEmits(['guardar'])
+const emit = defineEmits(["guardar"]);
+const props = defineProps({
+  enviando: {
+    type: Boolean,
+    default: false
+  }
+})
+
 
 // Función que se llama al hacer clic en "Enviar"
 function enviar() {
-  emit('guardar', {
-  observaciones: observaciones.value,
-  fecha: dayjs().format("YYYY-MM-DD")
-})
+  if (props.enviando) return
 
+  emit("guardar", {
+    observaciones: observaciones.value,
+    fecha: dayjs().format("YYYY-MM-DD")
+  })
 }
+
 </script>
 
 <template>
@@ -30,8 +38,17 @@ function enviar() {
       placeholder="Escribe tus observaciones aquí..."
     ></textarea>
 
-    <button class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto mb-2" @click="enviar">
-      Enviar reporte 
+    <button
+      class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto mb-2"
+      @click="enviar"
+      :disabled="props.enviando"
+    >
+      <span v-if="!props.enviando"> Enviar reporte </span>
+
+      <span v-else>
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Enviando...
+      </span>
     </button>
   </div>
 </template>

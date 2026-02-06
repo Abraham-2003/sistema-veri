@@ -113,6 +113,19 @@ const routes = [
         component: () => import('../views/Coordinador/GestionUsuarios.vue'),
       },
       {
+        path: 'Reportes',
+        component: () => import('../views/Coordinador/CoordinadorReportes.vue'),
+      },
+      {
+        path: '/reportes/:ubicacion',
+        name: 'ReporteVeriCoordinador',
+        component: () => import('../views/Coordinador/ReporteVeriCoordinador.vue')
+      },
+      {
+        path: 'Reportes Laboratorios',
+        component: () => import('../views/Coordinador/ReportesLabCoordinador.vue'),
+      },
+      {
         path: 'Infraestructura',
         component: () => import('../views/Coordinador/CoordinadorInfraestructura.vue'),
       },
@@ -140,7 +153,7 @@ const routes = [
         path: 'OrdenServicio',
         component: () => import('../views/Coordinador/OrdenServicio.vue')
       }
-      
+
     ]
   },
   {

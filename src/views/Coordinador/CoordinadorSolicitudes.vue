@@ -22,7 +22,8 @@
           <th>Fecha de Pago</th>
           <th>Fecha de Entrega</th>
           <th>Observaciones</th>
-          <th>Observaciones</th>
+          <th>Estatus</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -40,6 +41,26 @@
             :class="sol.estatus === 'Pendiente' ? 'bg-warning' : 'bg-success'"
           >
             {{ sol.estatus }}
+          </td>
+          <td class="text-center">
+            <div class="d-inline-flex gap-2">
+              <button
+                class="btn btn-outline-warning btn-sm"
+                @click="abrirModalEdicion(sol)"
+                title="Editar"
+              >
+                <i class="bi bi-pencil-square"></i>
+              </button>
+
+              <a
+                :href="generarLinkWhatsApp(sol)"
+                target="_blank"
+                class="btn btn-success btn-sm"
+                title="Enviar WhatsApp"
+              >
+                <i class="bi bi-whatsapp"></i>
+              </a>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -65,24 +86,115 @@
       </ul>
     </nav>
   </div>
+  <div class="modal fade" id="modalEdicion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Solicitud</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label">Tipo</label>
+            <input v-model="solicitudEditada.tipo" type="text" class="form-control" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Proveedor</label>
+            <input
+              v-model="solicitudEditada.proveedor"
+              type="text"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Fecha de Solicitud</label>
+            <input
+              v-model="solicitudEditada.fechaSolicitud"
+              type="date"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Fecha de Pago</label>
+            <input
+              v-model="solicitudEditada.fechaPago"
+              type="date"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Fecha de Entrega</label>
+            <input
+              v-model="solicitudEditada.fechaEntrega"
+              type="date"
+              class="form-control"
+            />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Observaciones</label>
+            <textarea
+              v-model="solicitudEditada.observaciones"
+              class="form-control"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-success" @click="guardarCambiosSolicitud">
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { db } from "../../servivces/auth.js";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const centros = ref([]);
 const solicitudes = ref([]);
 const filtroCentro = ref("");
 const paginaActual = ref(1);
-const porPagina = 10;
+const porPagina = 5;
+
+const solicitudEditada = ref({});
+const modal = ref(null);
+
+const abrirModalEdicion = (solicitud) => {
+  solicitudEditada.value = { ...solicitud };
+  const modalElement = document.getElementById("modalEdicion");
+  modal.value = new bootstrap.Modal(modalElement);
+  modal.value.show();
+};
+
+const guardarCambiosSolicitud = async () => {
+  try {
+    const { id, ...datosActualizados } = solicitudEditada.value;
+    await updateDoc(doc(db, "solicitudes", id), datosActualizados);
+    console.log("[✅ Solicitud actualizada]", id);
+    modal.value.hide();
+    await cargarSolicitudes();
+  } catch (error) {
+    console.error("[❌ Error al actualizar solicitud]", error);
+  }
+};
 
 const nombreCentro = (id) => {
-  const centro = centros.value.find(c => c.id === id)
-  return centro ? centro.ubicacion : 'Centro desconocido'
-}
-
+  const centro = centros.value.find((c) => c.id === id);
+  return centro ? centro.ubicacion : "Centro desconocido";
+};
 
 const cargarCentros = async () => {
   const snapshot = await getDocs(
@@ -119,6 +231,27 @@ const totalPaginas = computed(() => {
     : solicitudes.value;
   return Math.ceil(filtradas.length / porPagina);
 });
+
+const generarMensajeWhatsApp = (sol) => {
+  if (!sol) return "⚠️ Solicitud no disponible";
+
+  return (
+    `*Solicitud de ${sol.tipo}*\n\n` +
+    `*Centro:* ${nombreCentro(sol.centroId)}\n` +
+    `*Elemento:* ${sol.elemento}\n` +
+    `*Proveedor:* ${sol.proveedor}\n` +
+    `*Fecha de solicitud:* ${sol.fechaSolicitud || "N/A"}\n` +
+    `*Fecha de pago:* ${sol.fechaPago || "N/A"}\n` +
+    `*Fecha de entrega:* ${sol.fechaEntrega || "N/A"}\n` +
+    `*Observaciones:* ${sol.observaciones || "Sin observaciones"}\n` +
+    `*Estatus:* ${sol.estatus}`
+  );
+};
+
+const generarLinkWhatsApp = (sol) => {
+  const mensaje = generarMensajeWhatsApp(sol);
+  return `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+};
 
 onMounted(() => {
   cargarCentros();

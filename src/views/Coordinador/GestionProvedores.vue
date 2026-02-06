@@ -11,7 +11,7 @@
           <th>Nombre</th>
           <th>Contacto</th>
           <th>Servicio</th>
-          <th>Acciones</th>
+      
         </tr>
       </thead>
       <tbody>
@@ -19,10 +19,7 @@
           <td>{{ prov.nombre }}</td>
           <td>{{ prov.contacto }}</td>
           <td>{{ prov.servicio }}</td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModal(prov)">Editar</button>
-            <button class="btn btn-danger btn-sm" @click="eliminarProveedor(prov.id)">Eliminar</button>
-          </td>
+          
         </tr>
       </tbody>
     </table>
@@ -43,25 +40,7 @@
     </nav>
 
     <!-- Modal -->
-    <div class="modal fade" id="modalProveedor" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
-        <form class="modal-content" @submit.prevent="guardarProveedor">
-          <div class="modal-header">
-            <h5 class="modal-title">{{ editando ? 'Editar proveedor' : 'Nuevo proveedor' }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <input v-model="nuevo.nombre" placeholder="Nombre" class="form-control mb-2" />
-            <input v-model="nuevo.contacto" placeholder="Contacto" class="form-control mb-2" />
-            <input v-model="nuevo.servicio" placeholder="Servicio que ofrece" class="form-control mb-2" />
-          </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guardar</button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    
   </div>
 </template>
 
@@ -112,10 +91,6 @@ const abrirModal = (prov = null) => {
   new bootstrap.Modal(document.getElementById('modalProveedor')).show()
 }
 
-const eliminarProveedor = async (id) => {
-  await deleteDoc(doc(db, 'proveedores', id))
-  cargarProveedores()
-}
 
 const totalPaginas = computed(() => Math.ceil(proveedores.value.length / porPagina))
 const proveedoresPaginados = computed(() => {

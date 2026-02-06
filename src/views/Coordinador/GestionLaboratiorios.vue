@@ -11,7 +11,7 @@
           <th>Nombre</th>
           <th>Contacto</th>
           <th>Especialidad</th>
-          <th>Acciones</th>
+          
         </tr>
       </thead>
       <tbody>
@@ -19,9 +19,7 @@
           <td>{{ lab.nombre }}</td>
           <td>{{ lab.contacto }}</td>
           <td>{{ lab.especialidad }}</td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModal(lab)">Editar</button>
-          </td>
+          
         </tr>
       </tbody>
     </table>
@@ -40,27 +38,6 @@
         </li>
       </ul>
     </nav>
-
-    <!-- Modal -->
-    <div class="modal fade" id="modalLaboratorio" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
-        <form class="modal-content" @submit.prevent="guardarLaboratorio">
-          <div class="modal-header">
-            <h5 class="modal-title">{{ editando ? 'Editar laboratorio' : 'Nuevo laboratorio' }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <input v-model="nuevo.nombre" placeholder="Nombre" class="form-control mb-2" />
-            <input v-model="nuevo.contacto" placeholder="Contacto" class="form-control mb-2" />
-            <input v-model="nuevo.especialidad" placeholder="Especialidad" class="form-control mb-2" />
-          </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guardar</button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 </template>
 

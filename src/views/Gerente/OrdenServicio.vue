@@ -31,7 +31,7 @@
     <nav>
       <ul class="pagination">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">Anterior</button>
+          <button class="page-link" @click="paginaActual > 1 && paginaActual--">Anterior</button>
         </li>
         <li
           class="page-item"
@@ -42,7 +42,7 @@
           <button class="page-link" @click="paginaActual = n">{{ n }}</button>
         </li>
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
-          <button class="page-link" @click="paginaActual++">Siguiente</button>
+          <button class="page-link" @click="paginaActual < totalPaginas && paginaActual++">Siguiente</button>
         </li>
       </ul>
     </nav>
@@ -58,6 +58,7 @@
           <div class="modal-body">
             <div class="row">
               <div class="col-md-6 mb-2">
+              <label>Fecha</label>
                 <input
                   v-model="nueva.fecha"
                   type="date"
@@ -72,6 +73,7 @@
                   placeholder="Número de orden"
                 />
               </div>
+              <label>Hora inicio</label>
               <div class="col-md-6 mb-2">
                 <input
                   v-model="nueva.horaInicio"
@@ -80,6 +82,7 @@
                   placeholder="Hora inicio"
                 />
               </div>
+              <label>Hora término</label>
               <div class="col-md-6 mb-2">
                 <input
                   v-model="nueva.horaTermino"
@@ -155,7 +158,9 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="submit" class="btn btn-primary" :disabled="cargando">
+              {{ cargando ? "Guardando..." : "Guardar" }}
+            </button>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancelar
             </button>
@@ -203,6 +208,7 @@ import { db } from "../../servivces/auth.js";
 import { collection, getDocs, addDoc, doc } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
+const cargando = ref(false);
 const ordenes = ref([]);
 const nueva = ref({
   fecha: "",
@@ -229,43 +235,52 @@ const cargarOrdenes = async () => {
 };
 
 const guardarOrden = async () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  const centroId = user?.centroId || "sin-centro";
+  if (cargando.value) return; // evita doble ejecución
+  cargando.value = true;
 
-  const lineas = nueva.value.lineasTexto
-    .split(",")
-    .map((l) => l.trim())
-    .filter((l) => l);
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const centroId = user?.centroId || "sin-centro";
 
-  const orden = {
-    ...nueva.value,
-    lineas,
-    centroId,
-  };
+    const lineas = nueva.value.lineasTexto
+      .split(",")
+      .map((l) => l.trim())
+      .filter((l) => l);
 
-  delete orden.lineasTexto;
+    const orden = {
+      ...nueva.value,
+      lineas,
+      centroId,
+    };
 
-  await addDoc(collection(db, "ordenesServicio"), orden);
-  bootstrap.Modal.getInstance(document.getElementById("modalFormulario")).hide();
-  nueva.value = {
-    fecha: "",
-    ordenNumero: "",
-    lineasTexto: "",
-    horaInicio: "",
-    horaTermino: "",
-    recibe: "",
-    proveedor: "",
-    tecnico: "",
-    reporteNumero: "",
-    falla: "",
-    trabajo: "",
-    status: "",
-    observaciones: "",
-  };
+    delete orden.lineasTexto;
 
-  cargarOrdenes();
-  ordenes.value.forEach(o => console.log(o.fecha, new Date(o.fecha)))
+    await addDoc(collection(db, "ordenesServicio"), orden);
 
+    bootstrap.Modal.getInstance(document.getElementById("modalFormulario")).hide();
+
+    nueva.value = {
+      fecha: "",
+      ordenNumero: "",
+      lineasTexto: "",
+      horaInicio: "",
+      horaTermino: "",
+      recibe: "",
+      proveedor: "",
+      tecnico: "",
+      reporteNumero: "",
+      falla: "",
+      trabajo: "",
+      status: "",
+      observaciones: "",
+    };
+
+    await cargarOrdenes();
+  } catch (error) {
+    console.error("Error al guardar la orden:", error);
+  } finally {
+    cargando.value = false;
+  }
 };
 
 const verDetalles = (orden) => {
@@ -292,21 +307,26 @@ const abrirFormulario = () => {
   new bootstrap.Modal(document.getElementById("modalFormulario")).show();
 };
 
-const totalPaginas = computed(() => Math.ceil(ordenes.value.length / porPagina));
-const ordenesPaginadas = computed(() => {
-  const user = JSON.parse(localStorage.getItem("user"))
-  const centroId = user?.centroId || "sin-centro"
+const totalPaginas = computed(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const centroId = user?.centroId || "sin-centro";
+  const propias = ordenes.value.filter((o) => o.centroId === centroId);
+  return Math.ceil(propias.length / porPagina);
+});
 
-  const propias = ordenes.value.filter(o => o.centroId === centroId)
+const ordenesPaginadas = computed(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const centroId = user?.centroId || "sin-centro";
+
+  const propias = ordenes.value.filter((o) => o.centroId === centroId);
 
   const ordenadas = propias
-    .filter(o => o.fecha)
-    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .filter((o) => o.fecha)
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-  const inicio = (paginaActual.value - 1) * porPagina
-  return ordenadas.slice(inicio, inicio + porPagina)
-})
-
+  const inicio = (paginaActual.value - 1) * porPagina;
+  return ordenadas.slice(inicio, inicio + porPagina);
+});
 
 onMounted(() => {
   cargarOrdenes();

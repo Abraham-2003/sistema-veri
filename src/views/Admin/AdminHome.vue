@@ -28,6 +28,14 @@
           </div>
           <div class="stat-icon">📩</div>
         </div>
+
+        <div class="stat-card rojo">
+          <div class="stat-info">
+            <h5>Infraestructura fuera de servicio</h5>
+            <p class="stat-value">{{ infraestructuraFueraServicio }}</p>
+          </div>
+          <div class="stat-icon">🏗️</div>
+        </div>
       </div>
 
       <!-- Accesos rápidos -->
@@ -148,6 +156,8 @@ const user = ref(JSON.parse(localStorage.getItem("user")) || {});
 const centrosActivos = ref(0);
 const solicitudesActivas = ref(0);
 const reportesHoy = ref(0);
+const infraestructuraFueraServicio = ref(0);
+
 
 async function obtenerReportesHoy() {
   const inicioDia = dayjs().startOf("day").toISOString();
@@ -174,11 +184,26 @@ async function obtenerSolicitudesActivas() {
   const snapshot = await getDocs(q);
   solicitudesActivas.value = snapshot.size;
 }
+const cargarInfraestructuraFueraServicio = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "infraestructura"));
+
+    infraestructuraFueraServicio.value = snapshot.docs.filter(
+      (doc) => doc.data().estatus === "Fuera de servicio"
+    ).length;
+
+  } catch (error) {
+    console.error("[Error al cargar infraestructura]", error);
+    infraestructuraFueraServicio.value = 0;
+  }
+};
+
 
 onMounted(async () => {
   await obtenerCentrosActivos();
   await obtenerSolicitudesActivas();
   await obtenerReportesHoy();
+  cargarInfraestructuraFueraServicio();
 });
 
 const centros = ref({});
@@ -268,7 +293,7 @@ async function cargarReportes() {
       consumoGases[tipo] = calcularConsumoPorCiclos(ordenados);
     });
 
-    const diaActual = dayjs().date(); 
+    const diaActual = dayjs().date();
     const reportesEsperados = diaActual * 2;
 
     resumenPorCentro.value[id] = {
@@ -280,7 +305,6 @@ async function cargarReportes() {
     };
   });
 }
-
 
 onMounted(async () => {
   await cargarCentros();

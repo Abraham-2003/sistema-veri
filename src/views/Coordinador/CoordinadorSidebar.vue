@@ -57,6 +57,20 @@
         </div>
       </div>
       <router-link
+        to="/Coordinador/Reportes"
+        class="nav-link text-white py-2 px-3 rounded mb-1"
+        active-class="bg-secondary"
+      >
+        Reportes
+      </router-link>
+      <router-link
+        to="/Coordinador/Reportes Laboratorios"
+        class="nav-link text-white py-2 px-3 rounded mb-1"
+        active-class="bg-secondary"
+      >
+        Reportes laboratorios
+      </router-link>
+      <router-link
         to="/Coordinador/Consultas"
         class="nav-link text-white py-2 px-3 rounded mb-1"
         active-class="bg-secondary"

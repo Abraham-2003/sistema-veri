@@ -3,7 +3,7 @@
     <h6 class="text-center mb-3 text-success">Calibraciones por línea</h6>
 
     <!-- Tarjetas por línea -->
-    <div v-for="(linea, index) in props.lineas" :key="index" class="card mb-3 shadow-sm">
+    <div v-for="(linea, index) in lineas" :key="index" class="card mb-3 shadow-sm">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h6 class="card-title mb-0">Línea {{ linea }}</h6>
@@ -30,7 +30,7 @@
             class="form-check-input"
             type="checkbox"
             :id="`check-${linea}-${equipo}`"
-            v-model="calibraciones[linea][equipo]"
+            v-model="localCalibraciones[linea][equipo]"
           />
           <label class="form-check-label" :for="`check-${linea}-${equipo}`">
             {{ equipo }}
@@ -38,6 +38,8 @@
         </div>
       </div>
     </div>
+
+    <!-- Observaciones -->
     <div class="mb-3">
       <label for="observacionesGenerales" class="form-label text-muted"
         >Observaciones generales</label
@@ -46,17 +48,18 @@
         id="observacionesGenerales"
         class="form-control"
         rows="3"
-        v-model="observacionesGenerales"
-        placeholder=""
+        v-model="localObservaciones"
+        placeholder="Escribe observaciones..."
       ></textarea>
     </div>
+
+    <!-- Botón continuar -->
     <div class="text-center">
       <button
         class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto"
         @click="emitirSiguiente"
-        
       >
-        Gases  <i class="bi bi-arrow-right-circle me-2"></i>
+        Gases <i class="bi bi-arrow-right-circle me-2"></i>
       </button>
     </div>
   </div>
@@ -66,15 +69,12 @@
 import { ref, watch, defineProps, defineEmits } from "vue";
 
 const props = defineProps({
-  lineas: {
-    type: Array,
-    default: () => [],
-  },
-  lineaDual: {
-    type: [String, Number],
-    default: null,
-  },
+  lineas: { type: Array, default: () => [] },
+  lineaDual: { type: [String, Number], default: null },
+  modelValue: { type: Object, default: () => ({ calibraciones: {}, observaciones: "" }) },
 });
+
+const emit = defineEmits(["update:modelValue", "siguiente"]);
 
 const equipos = [
   "Analizador Gases",
@@ -88,62 +88,53 @@ function equiposPorLinea(linea) {
   return linea == props.lineaDual ? equipos : equipos.filter((e) => e !== "Opacímetro");
 }
 
-const calibraciones = ref({});
-const observacionesGenerales = ref("");
-const emit = defineEmits(["siguiente"]);
+// Estado local para edición
+const localCalibraciones = ref({});
+const localObservaciones = ref("");
 
-function todasSeleccionadas(linea) {
-  return equiposPorLinea(linea).every((equipo) => calibraciones.value[linea][equipo]);
-}
-
-function toggleLinea(linea) {
-  const estado = !todasSeleccionadas(linea);
-  equiposPorLinea(linea).forEach((equipo) => {
-    calibraciones.value[linea][equipo] = estado;
-  });
-}
-
+// Inicializar calibraciones por línea
 watch(
   () => props.lineas,
   (lineas) => {
     if (Array.isArray(lineas) && lineas.length > 0) {
-      calibraciones.value = {};
+      localCalibraciones.value = {};
       lineas.forEach((linea) => {
-        calibraciones.value[linea] = {};
+        localCalibraciones.value[linea] = {};
         equiposPorLinea(linea).forEach((equipo) => {
-          calibraciones.value[linea][equipo] = false;
+          localCalibraciones.value[linea][equipo] = false;
         });
       });
-      observacionesGenerales.value = "";
-      console.log("[✅ Calibraciones inicializadas]", calibraciones.value);
-    } else {
-      console.warn("[⚠️ props.lineas no es un array válido]", lineas);
+      localObservaciones.value = "";
+      console.log("[✅ Calibraciones inicializadas]", localCalibraciones.value);
     }
   },
   { immediate: true }
 );
 
-// Guardar temporalmente en localStorage
-watch(
-  calibraciones,
-  (nuevo) => {
-    localStorage.setItem("calibracionesTemp", JSON.stringify(nuevo));
-  },
-  { deep: true }
-);
+function todasSeleccionadas(linea) {
+  return equiposPorLinea(linea).every(
+    (equipo) => localCalibraciones.value[linea][equipo]
+  );
+}
 
-watch(observacionesGenerales, (nuevo) => {
-  if (nuevo.trim() === "") {
-    localStorage.removeItem("observacionesGeneralesTemp");
-  } else {
-    localStorage.setItem("observacionesGeneralesTemp", nuevo);
-  }
-});
+function toggleLinea(linea) {
+  const estado = !todasSeleccionadas(linea);
+  equiposPorLinea(linea).forEach((equipo) => {
+    localCalibraciones.value[linea][equipo] = estado;
+  });
+}
 
 function emitirSiguiente() {
-  emit("siguiente", {
-    calibraciones: calibraciones.value,
-    observaciones: observacionesGenerales.value,
-  });
+  // Validación simple
+  const algunaSeleccionada = Object.values(localCalibraciones.value).some((equipos) =>
+    Object.values(equipos).includes(true)
+  );
+  if (!algunaSeleccionada) {
+    alert("Debes seleccionar al menos una calibración.");
+    return;
+  }
+
+  emit("update:modelValue", localCalibraciones.value);
+  emit("siguiente", localObservaciones.value);
 }
 </script>

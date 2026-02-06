@@ -103,7 +103,7 @@ import { computed } from "vue";
 const hora = new Date().getHours();
 
 const accesoReportes = computed(() => {
-  return (hora >= 9 && hora < 11) || (hora >= 13 && hora < 20);
+  return (hora >= 7 && hora < 11) || (hora >= 11 && hora < 22);
 });
 
 const props = defineProps({
