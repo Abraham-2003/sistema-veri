@@ -1,62 +1,103 @@
 <template>
   <div class="container py-4">
-    <h3 class="mb-4">Gestión de Centros</h3>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-semibold mb-0">Gestión de Centros</h3>
 
-    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo Centro</button>
+      <button class="btn btn-success btn-sm" @click="abrirModal()">
+        Nuevo centro
+      </button>
+    </div>
 
     <!-- Tabla -->
-    <table class="table table-bordered table-hover">
-      <thead class="table-dark">
-        <tr>
-          <th>Ubicación</th>
-          <th>Encargado</th>
-          <th>Lineas</th>
-          <th>Estatus</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="centro in centrosPaginados" :key="centro.id">
-          <td>{{ centro.ubicacion }}</td>
-          <td>{{ nombreEncargado(centro.encargado) }}</td>
-          <td>{{ centro.lineas }}</td>
-          <td>
-            <span :class="centro.estatus === 'Activo' ? 'text-success' : 'text-danger'">
-              {{ centro.estatus }}
-            </span>
-          </td>
-          <td>
-            <button class="btn btn-warning btn-sm me-2" @click="abrirModal(centro)">
-              Editar
-            </button>
-            <button class="btn btn-danger btn-sm" @click="desactivarCentro(centro)">
-              Desactivar
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table infra-table">
+        <thead>
+          <tr>
+            <th>Ubicación</th>
+            <th class="d-none d-md-table-cell">Encargado</th>
+            <th>Líneas</th>
+            <th>Estatus</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr v-for="centro in centrosPaginados" :key="centro.id">
+            <td class="fw-medium">
+              {{ centro.ubicacion }}
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ nombreEncargado(centro.encargado) }}
+            </td>
+
+            <td>
+              <span class="lines-pill">
+                {{ centro.lineas }}
+              </span>
+            </td>
+
+            <td>
+              <span
+                class="status-pill"
+                :class="centro.estatus === 'Activo' ? 'status-active' : 'status-inactive'"
+              >
+                {{ centro.estatus }}
+              </span>
+            </td>
+
+            <td class="text-end">
+              <div class="action-buttons">
+                <button
+                  class="btn btn-light btn-sm"
+                  @click="abrirModal(centro)"
+                  title="Editar"
+                >
+                  ✏️
+                </button>
+
+                <button
+                  class="btn btn-light btn-sm text-danger"
+                  @click="desactivarCentro(centro)"
+                  title="Desactivar"
+                >
+                  ⛔
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr v-if="centrosPaginados.length === 0">
+            <td colspan="5" class="text-center text-muted py-4">
+              No hay centros registrados
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Paginación -->
-    <nav>
-      <ul class="pagination">
+    <nav class="mt-3">
+      <ul class="pagination pagination-sm justify-content-center">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">Anterior</button>
+          <button class="page-link" @click="paginaActual--">
+            Anterior
+          </button>
         </li>
-        <li
-          class="page-item"
-          v-for="n in totalPaginas"
-          :key="n"
-          :class="{ active: paginaActual === n }"
-        >
-          <button class="page-link" @click="paginaActual = n">{{ n }}</button>
+
+        <li class="page-item disabled">
+          <span class="page-link">
+            Página {{ paginaActual }}
+          </span>
         </li>
+
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
-          <button class="page-link" @click="paginaActual++">Siguiente</button>
+          <button class="page-link" @click="paginaActual++">
+            Siguiente
+          </button>
         </li>
       </ul>
     </nav>
-
     <!-- Modal -->
     <div class="modal fade" id="modalCentro" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -345,5 +386,65 @@ onMounted(() => {
 }
 .bg-light {
   background-color: #f8f9fa !important;
+}
+/* Base corporativa */
+.infra-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.infra-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.infra-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.infra-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.infra-table td {
+  vertical-align: middle;
+  border-top: none;
+}
+
+/* Pills */
+.lines-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #eef1f4;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-active {
+  background: #e6f4ea;
+  color: #198754;
+}
+
+.status-inactive {
+  background: #fdecea;
+  color: #dc3545;
+}
+
+/* Acciones */
+.action-buttons {
+  display: inline-flex;
+  gap: 6px;
 }
 </style>

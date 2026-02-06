@@ -1,56 +1,91 @@
 <template>
-  <div class="container py-3">
-    <h3 class="mb-4">Reportes Laboratorios</h3>
-
-    <!-- Filtro de centros -->
-    <div class="mb-3">
-      <label class="form-label text-muted">Filtrar por centro</label>
-      <select v-model="centroSeleccionado" class="form-select">
-        <option value="">Todos los centros</option>
-        <option v-for="centro in centros" :key="centro.id" :value="centro.id">
-          {{ centro.ubicacion }}
-        </option>
-      </select>
+  <div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-semibold mb-0">Reportes Laboratorios</h3>
     </div>
 
-    <!-- Tabla de reportes -->
+    <!-- Filtro -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label class="form-label small text-muted">Filtrar por centro</label>
+        <select v-model="centroSeleccionado" class="form-select form-select-sm">
+          <option value="">Todos los centros</option>
+          <option v-for="centro in centros" :key="centro.id" :value="centro.id">
+            {{ centro.ubicacion }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tabla -->
     <div class="table-responsive">
-      <table class="table table-sm table-bordered align-middle text-center table-hover">
-        <thead class="table-dark bg-opacity-25">
+      <table class="table infra-table">
+        <thead>
           <tr>
             <th>Tipo</th>
-            <th>Subtipo</th>
-            <th>Linea</th>
+            <th class="d-none d-md-table-cell">Subtipo</th>
+            <th>Línea</th>
             <th>Folio</th>
             <th>Dictamen</th>
             <th>Vencimiento</th>
-            <th>Centro</th>
-            <th>Acciones</th>
-            <!-- Nueva columna -->
+            <th class="d-none d-md-table-cell">Centro</th>
+            <th class="text-end">Acciones</th>
           </tr>
         </thead>
+
         <tbody>
           <tr v-for="reporte in reportesFiltradosPaginados" :key="reporte.id">
-            <td>{{ reporte.tipo }}</td>
-            <td>{{ reporte.subtipo }}</td>
-            <td>{{ reporte.linea }}</td>
-            <td>{{ reporte.folio }}</td>
-            <td>{{ formatoFecha(reporte.dictamen) }}</td>
-            <td>{{ formatoFecha(reporte.vencimiento) }}</td>
-            <td>{{ nombreCentro(reporte.centroId) }}</td>
             <td>
-              <button
-                class="btn btn-warning btn-sm me-2"
-                @click="abrirModalEdicion(reporte)"
-              >
-                Editar
-              </button>
-              <button
-                class="btn btn-danger btn-sm"
-                @click="eliminarReporte(reporte.id)"
-              >
-                Eliminar
-              </button>
+              <span class="type-pill">{{ reporte.tipo }}</span>
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ reporte.subtipo }}
+            </td>
+
+            <td class="fw-medium">
+              {{ reporte.linea }}
+            </td>
+
+            <td>
+              <span class="folio-pill">
+                {{ reporte.folio }}
+              </span>
+            </td>
+
+            <td class="text-muted small">
+              {{ formatoFecha(reporte.dictamen) }}
+            </td>
+
+            <td>
+              <span class="date-pill">
+                {{ formatoFecha(reporte.vencimiento) }}
+              </span>
+            </td>
+
+            <td class="d-none d-md-table-cell">
+              {{ nombreCentro(reporte.centroId) }}
+            </td>
+
+            <td class="text-end">
+              <div class="action-buttons">
+                <button
+                  class="btn btn-light btn-sm"
+                  @click="abrirModalEdicion(reporte)"
+                  title="Editar"
+                >
+                  ✏️
+                </button>
+
+                <button
+                  class="btn btn-light btn-sm text-danger"
+                  @click="eliminarReporte(reporte.id)"
+                  title="Eliminar"
+                >
+                  🗑
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -59,51 +94,104 @@
 
     <!-- Paginación -->
     <nav class="mt-3">
-      <ul class="pagination justify-content-center">
+      <ul class="pagination pagination-sm justify-content-center">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">Anterior</button>
+          <button class="page-link" @click="paginaActual--">
+            Anterior
+          </button>
         </li>
+
         <li class="page-item disabled">
-          <span class="page-link">Página {{ paginaActual }}</span>
+          <span class="page-link">
+            Página {{ paginaActual }}
+          </span>
         </li>
+
         <li class="page-item" :class="{ disabled: paginaActual >= totalPaginas }">
-          <button class="page-link" @click="paginaActual++">Siguiente</button>
+          <button class="page-link" @click="paginaActual++">
+            Siguiente
+          </button>
         </li>
       </ul>
     </nav>
-    <div class="modal fade" id="modalEdicion" tabindex="-1" aria-labelledby="modalEdicionLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalEdicionLabel">Editar reporte</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2">
-          <label class="form-label">Tipo</label>
-          <input v-model="reporteEditado.tipo" type="text" class="form-control" />
+
+    <!-- Modal edición -->
+    <div
+      class="modal fade"
+      id="modalEdicion"
+      tabindex="-1"
+      aria-labelledby="modalEdicionLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalEdicionLabel">
+              Editar reporte
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Cerrar"
+            ></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="mb-2">
+              <label class="form-label small">Tipo</label>
+              <input
+                v-model="reporteEditado.tipo"
+                type="text"
+                class="form-control form-control-sm"
+              />
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small">Folio</label>
+              <input
+                v-model="reporteEditado.folio"
+                type="text"
+                class="form-control form-control-sm"
+              />
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small">Dictamen</label>
+              <input
+                v-model="reporteEditado.dictamen"
+                type="date"
+                class="form-control form-control-sm"
+              />
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small">Vencimiento</label>
+              <input
+                v-model="reporteEditado.vencimiento"
+                type="date"
+                class="form-control form-control-sm"
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              class="btn btn-secondary btn-sm"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button
+              class="btn btn-success btn-sm"
+              @click="guardarCambiosReporte"
+            >
+              Guardar cambios
+            </button>
+          </div>
         </div>
-        <div class="mb-2">
-          <label class="form-label">Folio</label>
-          <input v-model="reporteEditado.folio" type="text" class="form-control" />
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Dictamen</label>
-          <input v-model="reporteEditado.dictamen" type="date" class="form-control" />
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Vencimiento</label>
-          <input v-model="reporteEditado.vencimiento" type="date" class="form-control" />
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-success" @click="guardarCambiosReporte">Guardar cambios</button>
       </div>
     </div>
-  </div>
-</div>
-
   </div>
 </template>
 <script setup>
@@ -201,3 +289,65 @@ onMounted(() => {
   cargarCentros();
 });
 </script>
+<style scoped>
+/* Base corporativa */
+.infra-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.infra-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.infra-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.infra-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.infra-table td {
+  vertical-align: middle;
+  border-top: none;
+}
+
+/* Pills */
+.type-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #eef1f4;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.folio-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #f1f3f5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+.date-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #e9ecef;
+  font-size: 0.75rem;
+  color: #495057;
+}
+
+/* Acciones */
+.action-buttons {
+  display: inline-flex;
+  gap: 6px;
+}
+</style>

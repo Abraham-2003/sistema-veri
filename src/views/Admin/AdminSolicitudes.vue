@@ -1,154 +1,208 @@
 <template>
   <div class="container py-4">
-    <h3 class="mb-4">Histórico de Solicitudes</h3>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-semibold mb-0">Histórico de Solicitudes</h3>
+    </div>
 
-    <!-- Filtro por centro -->
-    <select v-model="filtroCentro" class="form-select mb-3">
-      <option value="">Todos los centros activos</option>
-      <option v-for="centro in centros" :key="centro.id" :value="centro.id">
-        {{ centro.ubicacion }}
-      </option>
-    </select>
+    <!-- Filtro -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <select v-model="filtroCentro" class="form-select form-select-sm">
+          <option value="">Todos los centros activos</option>
+          <option v-for="centro in centros" :key="centro.id" :value="centro.id">
+            {{ centro.ubicacion }}
+          </option>
+        </select>
+      </div>
+    </div>
 
     <!-- Tabla -->
-    <table class="table table-bordered table-hover">
-      <thead class="table-dark">
-        <tr>
-          <th>Centro</th>
-          <th>Tipo</th>
-          <th>Elemento</th>
-          <th>Proveedor o Laboratorio</th>
-          <th>Fecha de Solicitud</th>
-          <th>Fecha de Pago</th>
-          <th>Fecha de Entrega</th>
-          <th>Observaciones</th>
-          <th>Estatus</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="sol in solicitudesFiltradas" :key="sol.id">
-          <td>{{ nombreCentro(sol.centroId) }}</td>
-          <td>{{ sol.tipo }}</td>
-          <td>{{ sol.elemento }}</td>
-          <td>{{ sol.proveedor }}</td>
-          <td>{{ sol.fechaSolicitud }}</td>
-          <td>{{ sol.fechaPago }}</td>
-          <td>{{ sol.fechaEntrega }}</td>
-          <td>{{ sol.observaciones }}</td>
-          <td
-            class="badge"
-            :class="sol.estatus === 'Pendiente' ? 'bg-warning' : 'bg-success'"
-          >
-            {{ sol.estatus }}
-          </td>
-          <td class="text-center">
-            <div class="d-inline-flex gap-2">
-              <button
-                class="btn btn-outline-warning btn-sm"
-                @click="abrirModalEdicion(sol)"
-                title="Editar"
-              >
-                <i class="bi bi-pencil-square"></i>
-              </button>
+    <div class="table-responsive">
+      <table class="table infra-table">
+        <thead>
+          <tr>
+            <th>Centro</th>
+            <th>Tipo</th>
+            <th>Elemento</th>
+            <th class="d-none d-lg-table-cell">Proveedor</th>
+            <th>Solicitud</th>
+            <th class="d-none d-md-table-cell">Pago</th>
+            <th class="d-none d-md-table-cell">Entrega</th>
+            <th class="d-none d-xl-table-cell">Observaciones</th>
+            <th>Estatus</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
 
-              <button
-                class="btn btn-outline-danger btn-sm"
-                @click="eliminarSolicitud(sol.id)"
-                title="Eliminar"
-              >
-                <i class="bi bi-trash"></i>
-              </button>
+        <tbody>
+          <tr v-for="sol in solicitudesFiltradas" :key="sol.id">
+            <td class="fw-medium">
+              {{ nombreCentro(sol.centroId) }}
+            </td>
 
-              <a
-                :href="generarLinkWhatsApp(sol)"
-                target="_blank"
-                class="btn btn-success btn-sm"
-                title="Enviar WhatsApp"
+            <td>
+              <span class="type-pill">{{ sol.tipo }}</span>
+            </td>
+
+            <td>{{ sol.elemento }}</td>
+
+            <td class="d-none d-lg-table-cell">
+              {{ sol.proveedor }}
+            </td>
+
+            <td class="text-muted small">
+              {{ sol.fechaSolicitud }}
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ sol.fechaPago || "—" }}
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ sol.fechaEntrega || "—" }}
+            </td>
+
+            <td class="d-none d-xl-table-cell text-truncate obs-cell">
+              {{ sol.observaciones || "—" }}
+            </td>
+
+            <td>
+              <span
+                class="status-pill"
+                :class="sol.estatus === 'Pendiente' ? 'pending' : 'done'"
               >
-                <i class="bi bi-whatsapp"></i>
-              </a>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+                {{ sol.estatus }}
+              </span>
+            </td>
+
+            <td class="text-end">
+              <div class="action-buttons">
+                <button
+                  class="btn btn-light btn-sm"
+                  @click="abrirModalEdicion(sol)"
+                  title="Editar"
+                >
+                  ✏️
+                </button>
+
+                <button
+                  class="btn btn-light btn-sm text-danger"
+                  @click="eliminarSolicitud(sol.id)"
+                  title="Eliminar"
+                >
+                  🗑
+                </button>
+
+                <a
+                  :href="generarLinkWhatsApp(sol)"
+                  target="_blank"
+                  class="btn btn-light btn-sm text-success"
+                  title="Enviar WhatsApp"
+                >
+                  💬
+                </a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Paginación -->
-    <nav>
-      <ul class="pagination">
+    <nav class="mt-3">
+      <ul class="pagination pagination-sm justify-content-end">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">Anterior</button>
+          <button class="page-link" @click="paginaActual--">
+            Anterior
+          </button>
         </li>
+
         <li
           class="page-item"
           v-for="n in totalPaginas"
           :key="n"
           :class="{ active: paginaActual === n }"
         >
-          <button class="page-link" @click="paginaActual = n">{{ n }}</button>
+          <button class="page-link" @click="paginaActual = n">
+            {{ n }}
+          </button>
         </li>
+
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
-          <button class="page-link" @click="paginaActual++">Siguiente</button>
+          <button class="page-link" @click="paginaActual++">
+            Siguiente
+          </button>
         </li>
       </ul>
     </nav>
   </div>
+
+  <!-- Modal Edición -->
   <div class="modal fade" id="modalEdicion" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Editar Solicitud</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
+
         <div class="modal-body">
           <div class="mb-2">
-            <label class="form-label">Tipo</label>
-            <input v-model="solicitudEditada.tipo" type="text" class="form-control" />
+            <label class="form-label small">Tipo</label>
+            <input v-model="solicitudEditada.tipo" type="text" class="form-control form-control-sm" />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Proveedor</label>
+            <label class="form-label small">Proveedor</label>
             <input
               v-model="solicitudEditada.proveedor"
               type="text"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Fecha de Solicitud</label>
+            <label class="form-label small">Fecha de Solicitud</label>
             <input
               v-model="solicitudEditada.fechaSolicitud"
               type="date"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Fecha de Pago</label>
+            <label class="form-label small">Fecha de Pago</label>
             <input
               v-model="solicitudEditada.fechaPago"
               type="date"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Fecha de Entrega</label>
+            <label class="form-label small">Fecha de Entrega</label>
             <input
               v-model="solicitudEditada.fechaEntrega"
               type="date"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Observaciones</label>
+            <label class="form-label small">Observaciones</label>
             <textarea
               v-model="solicitudEditada.observaciones"
-              class="form-control"
+              class="form-control form-control-sm"
             ></textarea>
           </div>
         </div>
+
         <div class="modal-footer">
-          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button class="btn btn-success" @click="guardarCambiosSolicitud">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button class="btn btn-success btn-sm" @click="guardarCambiosSolicitud">
             Guardar
           </button>
         </div>
@@ -278,3 +332,74 @@ onMounted(() => {
   cargarSolicitudes();
 });
 </script>
+<style scoped>
+/* Base tabla corporativa */
+.infra-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.infra-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.infra-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.infra-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.infra-table td {
+  vertical-align: middle;
+  border-top: none;
+}
+
+/* Tipo */
+.type-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #eef1f4;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+/* Estatus */
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-pill.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-pill.done {
+  background: #e6f4ea;
+  color: #198754;
+}
+
+/* Observaciones */
+.obs-cell {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Acciones */
+.action-buttons {
+  display: inline-flex;
+  gap: 6px;
+}
+</style>
