@@ -1,95 +1,151 @@
 <template>
   <div class="container py-4">
-    <h3 class="mb-4">Gestión de Usuarios</h3>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-semibold mb-0">Gestión de Usuarios</h3>
 
-    <!-- Botón para abrir modal de nuevo usuario -->
-    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo Usuario</button>
+      <button class="btn btn-success btn-sm" @click="abrirModal()">
+        Nuevo usuario
+      </button>
+    </div>
 
     <!-- Tabla -->
-    <table class="table table-bordered table-hover">
-      <thead class="table-dark">
-        <tr>
-          <th>Nombre</th>
-          <th>Correo</th>
-          <th>Rol</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="usuario in usuariosPaginados" :key="usuario.id">
-          <td>{{ usuario.nombre }}</td>
-          <td>{{ usuario.correo }}</td>
-          <td>{{ usuario.rol }}</td>
-          
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table infra-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th class="d-none d-md-table-cell">Correo</th>
+            <th>Rol</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr v-for="usuario in usuariosPaginados" :key="usuario.id">
+            <td class="fw-medium">
+              {{ usuario.nombre }}
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ usuario.correo }}
+            </td>
+
+            <td>
+              <span class="role-pill">
+                {{ usuario.rol }}
+              </span>
+            </td>
+
+            
+          </tr>
+
+          <tr v-if="usuariosPaginados.length === 0">
+            <td colspan="4" class="text-center text-muted py-4">
+              No hay usuarios registrados
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Paginación -->
-    <nav>
-      <ul class="pagination">
+    <nav class="mt-3">
+      <ul class="pagination pagination-sm justify-content-center">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">Anterior</button>
+          <button class="page-link" @click="paginaActual--">
+            Anterior
+          </button>
         </li>
-        <li
-          class="page-item"
-          v-for="n in totalPaginas"
-          :key="n"
-          :class="{ active: paginaActual === n }"
-        >
-          <button class="page-link" @click="paginaActual = n">{{ n }}</button>
+
+        <li class="page-item disabled">
+          <span class="page-link">
+            Página {{ paginaActual }}
+          </span>
         </li>
+
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
-          <button class="page-link" @click="paginaActual++">Siguiente</button>
+          <button class="page-link" @click="paginaActual++">
+            Siguiente
+          </button>
         </li>
       </ul>
     </nav>
 
     <!-- Modal -->
-    <div class="modal fade" id="modalUsuario" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
+    <div
+      class="modal fade"
+      id="modalUsuario"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" @submit.prevent="guardarUsuario">
           <div class="modal-header">
             <h5 class="modal-title">
-              {{ editando ? "Editar Usuario" : "Nuevo Usuario" }}
+              {{ editando ? "Editar usuario" : "Nuevo usuario" }}
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
           </div>
+
           <div class="modal-body">
-            <input
-              v-model="nuevo.nombre"
-              placeholder="Nombre"
-              class="form-control mb-2"
-            />
-            <input
-              v-model="nuevo.correo"
-              placeholder="Correo"
-              class="form-control mb-2"
-            />
-            <div class="input-group mb-2">
-              <input
-                :type="verPassword ? 'text' : 'password'"
-                v-model="nuevo.password"
-                placeholder="Contraseña"
-                class="form-control"
-              />
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                @click="verPassword = !verPassword"
-              >
-                <i :class="verPassword ? 'bi bi-eye' : 'bi bi-eye-slash'"></i>
-              </button>
+            <div class="mb-2">
+              <label class="form-label small">Nombre</label>
+              <input v-model="nuevo.nombre" class="form-control form-control-sm" />
             </div>
-            <select v-model="nuevo.rol" class="form-select mb-2">
-              <option disabled value="">Selecciona un rol</option>
-              <option value="Coordinador">Coordinador</option>
-              <option value="Gerente">Gerente</option>
-            </select>
+
+            <div class="mb-2">
+              <label class="form-label small">Correo</label>
+              <input v-model="nuevo.correo" class="form-control form-control-sm" />
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small">Contraseña</label>
+              <div class="input-group input-group-sm">
+                <input
+                  :type="verPassword ? 'text' : 'password'"
+                  v-model="nuevo.password"
+                  class="form-control"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  @click="verPassword = !verPassword"
+                >
+                  <i
+                    :class="verPassword ? 'bi bi-eye' : 'bi bi-eye-slash'"
+                  ></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small">Rol</label>
+              <select
+                v-model="nuevo.rol"
+                class="form-select form-select-sm"
+              >
+                <option disabled value="">Selecciona un rol</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Coordinador">Coordinador</option>
+                <option value="Gerente">Gerente</option>
+              </select>
+            </div>
           </div>
+
           <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guardar</button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              data-bs-dismiss="modal"
+            >
               Cancelar
+            </button>
+            <button type="submit" class="btn btn-success btn-sm">
+              Guardar
             </button>
           </div>
         </form>
@@ -98,6 +154,7 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { db } from "../../servivces/auth.js";
@@ -105,6 +162,8 @@ import {
   collection,
   getDocs,
   addDoc,
+  updateDoc,
+  deleteDoc,
   doc,
 } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -113,7 +172,7 @@ const usuarios = ref([]);
 const nuevo = ref({ nombre: "", correo: "", password: "", rol: "" });
 const editando = ref(null);
 const paginaActual = ref(1);
-const porPagina = 10;
+const porPagina = 15;
 const verPassword = ref(false);
 
 const cargarUsuarios = async () => {
@@ -159,3 +218,48 @@ onMounted(() => {
   cargarUsuarios();
 });
 </script>
+<style scoped>
+/* Base corporativa */
+.infra-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.infra-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.infra-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.infra-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.infra-table td {
+  vertical-align: middle;
+  border-top: none;
+}
+
+/* Pills */
+.role-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #eef1f4;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+/* Acciones */
+.action-buttons {
+  display: inline-flex;
+  gap: 6px;
+}
+</style>

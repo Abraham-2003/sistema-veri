@@ -7,11 +7,19 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+
       includeAssets: [
-        'favicon.png', 
-        'robots.txt', 
+        'favicon.png',
+        'robots.txt',
         'apple-touch-icon.png'
       ],
+
+      workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+      },
+
       manifest: {
         name: 'Gestión de Verificentros',
         short_name: 'Veri',

@@ -1,353 +1,230 @@
 <template>
   <div class="container py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="fw-semibold mb-0">Reportes Laboratorios</h3>
-    </div>
+    <h2 class="titulo">Vencimientos por Centro</h2>
 
-    <!-- Filtro -->
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <label class="form-label small text-muted">Filtrar por centro</label>
-        <select v-model="centroSeleccionado" class="form-select form-select-sm">
-          <option value="">Todos los centros</option>
-          <option v-for="centro in centros" :key="centro.id" :value="centro.id">
-            {{ centro.ubicacion }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Tabla -->
-    <div class="table-responsive">
-      <table class="table infra-table">
-        <thead>
-          <tr>
-            <th>Tipo</th>
-            <th class="d-none d-md-table-cell">Subtipo</th>
-            <th>Línea</th>
-            <th>Folio</th>
-            <th>Dictamen</th>
-            <th>Vencimiento</th>
-            <th class="d-none d-md-table-cell">Centro</th>
-            <th class="text-end">Acciones</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr v-for="reporte in reportesFiltradosPaginados" :key="reporte.id">
-            <td>
-              <span class="type-pill">{{ reporte.tipo }}</span>
-            </td>
-
-            <td class="d-none d-md-table-cell text-muted small">
-              {{ reporte.subtipo }}
-            </td>
-
-            <td class="fw-medium">
-              {{ reporte.linea }}
-            </td>
-
-            <td>
-              <span class="folio-pill">
-                {{ reporte.folio }}
-              </span>
-            </td>
-
-            <td class="text-muted small">
-              {{ formatoFecha(reporte.dictamen) }}
-            </td>
-
-            <td>
-              <span class="date-pill">
-                {{ formatoFecha(reporte.vencimiento) }}
-              </span>
-            </td>
-
-            <td class="d-none d-md-table-cell">
-              {{ nombreCentro(reporte.centroId) }}
-            </td>
-
-            <td class="text-end">
-              <div class="action-buttons">
-                <button
-                  class="btn btn-light btn-sm"
-                  @click="abrirModalEdicion(reporte)"
-                  title="Editar"
-                >
-                  ✏️
-                </button>
-
-                <button
-                  class="btn btn-light btn-sm text-danger"
-                  @click="eliminarReporte(reporte.id)"
-                  title="Eliminar"
-                >
-                  🗑
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Paginación -->
-    <nav class="mt-3">
-      <ul class="pagination pagination-sm justify-content-center">
-        <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">
-            Anterior
-          </button>
-        </li>
-
-        <li class="page-item disabled">
-          <span class="page-link">
-            Página {{ paginaActual }}
+    <div class="grid-centros">
+      <div
+        v-for="centro in centrosConRiesgo"
+        :key="centro.id"
+        class="centro-card"
+        :class="centro.riesgo.clase"
+        @click="verDetalleCentro(centro)"
+      >
+        <div class="centro-header">
+          <h3>{{ centro.ubicacion }}</h3>
+          <span class="badge" :class="centro.riesgo.badge">
+            {{ centro.riesgo.texto }}
           </span>
-        </li>
+        </div>
 
-        <li class="page-item" :class="{ disabled: paginaActual >= totalPaginas }">
-          <button class="page-link" @click="paginaActual++">
-            Siguiente
-          </button>
-        </li>
-      </ul>
-    </nav>
+        <p class="encargado">
+          Responsable:
+          <span class="nombre">{{ nombreEncargado(centro.encargado) }}</span>
+        </p>
 
-    <!-- Modal edición -->
-    <div
-      class="modal fade"
-      id="modalEdicion"
-      tabindex="-1"
-      aria-labelledby="modalEdicionLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="modalEdicionLabel">
-              Editar reporte
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Cerrar"
-            ></button>
-          </div>
+        <div class="vencimiento-info">
+          <strong>Próximo vencimiento:</strong>
+          <span>{{ centro.riesgo.fecha }}</span>
+        </div>
 
-          <div class="modal-body">
-            <div class="mb-2">
-              <label class="form-label small">Tipo</label>
-              <input
-                v-model="reporteEditado.tipo"
-                type="text"
-                class="form-control form-control-sm"
-              />
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label small">Folio</label>
-              <input
-                v-model="reporteEditado.folio"
-                type="text"
-                class="form-control form-control-sm"
-              />
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label small">Dictamen</label>
-              <input
-                v-model="reporteEditado.dictamen"
-                type="date"
-                class="form-control form-control-sm"
-              />
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label small">Vencimiento</label>
-              <input
-                v-model="reporteEditado.vencimiento"
-                type="date"
-                class="form-control form-control-sm"
-              />
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              class="btn btn-secondary btn-sm"
-              data-bs-dismiss="modal"
-            >
-              Cancelar
-            </button>
-            <button
-              class="btn btn-success btn-sm"
-              @click="guardarCambiosReporte"
-            >
-              Guardar cambios
-            </button>
-          </div>
+        <div v-if="centro.riesgo.dias <= 30" class="alerta">
+          {{ centro.riesgo.dias }} días restantes
         </div>
       </div>
     </div>
   </div>
 </template>
 <script setup>
-import { ref, onMounted, computed,  } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
 import { db } from "../../servivces/auth.js";
-import { collection, getDocs, query, orderBy, doc, deleteDoc, updateDoc } from "firebase/firestore";
-import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
+import { collection, getDocs } from "firebase/firestore";
+import dayjs from "dayjs";
 
-const reportesLab = ref([]);
+const router = useRouter();
+
 const centros = ref([]);
-const centroSeleccionado = ref("");
-const paginaActual = ref(1);
-const porPagina = 10;
-const reporteEditado = ref({});
-const modal = ref(null);
+const reportesLab = ref([]);
+const gerentes = ref([]);
 
-const abrirModalEdicion = (reporte) => {
-  console.log("[✏️ Editar reporte]", reporte);
-  reporteEditado.value = { ...reporte };
-
-  const modalElement = document.getElementById("modalEdicion");
-  if (modalElement) {
-    modal.value = new bootstrap.Modal(modalElement);
-    modal.value.show();
-  } else {
-    console.warn("[⚠️ No se encontró el elemento del modal]");
-  }
+/* 🔹 Cargas */
+const cargarCentros = async () => {
+  const snap = await getDocs(collection(db, "centros"));
+  centros.value = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
 
-const guardarCambiosReporte = async () => {
-  try {
-    const { id, ...datosActualizados } = reporteEditado.value;
-    await updateDoc(doc(db, "ReporteLab", id), datosActualizados);
-    console.log("[✅ Reporte actualizado]", id);
+const cargarReportesLab = async () => {
+  const snap = await getDocs(collection(db, "ReporteLab"));
+  reportesLab.value = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
 
-    if (modal.value) {
-      modal.value.hide();
+const cargarGerentes = async () => {
+  const snap = await getDocs(collection(db, "usuarios"));
+  gerentes.value = snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((u) => u.rol === "Gerente");
+};
+
+/* 🔹 Helpers */
+const nombreEncargado = (id) => {
+  const g = gerentes.value.find((x) => x.id === id);
+  return g ? g.nombre : "Sin asignar";
+};
+
+/* 🔹 Cálculo de riesgo */
+const centrosConRiesgo = computed(() => {
+  return centros.value.map((centro) => {
+    const reportesCentro = reportesLab.value.filter(
+      (r) => r.centroId === centro.id && r.vencimiento
+    );
+
+    if (reportesCentro.length === 0) {
+      return {
+        ...centro,
+        riesgo: {
+          dias: null,
+          texto: "Sin reportes",
+          fecha: "—",
+          clase: "ok",
+          badge: "badge-verde",
+        },
+      };
     }
 
-    await cargarReportesLab(); // Recarga la lista
-  } catch (error) {
-    console.error("[❌ Error al actualizar reporte]", error);
-  }
-};
+    const fechas = reportesCentro.map((r) => dayjs(r.vencimiento));
 
-const eliminarReporte = async (id) => {
-  const confirmacion = confirm("¿Estás seguro de que deseas eliminar este reporte?");
-  if (!confirmacion) return;
+    const proximo = fechas.sort((a, b) => a.diff(b))[0];
+    const dias = proximo.diff(dayjs(), "day");
 
-  try {
-    await deleteDoc(doc(db, "ReporteLab", id));
-    console.log("[🗑️ Reporte eliminado]", id);
-    await cargarReportesLab();
-  } catch (error) {
-    console.error("[❌ Error al eliminar reporte]", error);
-  }
-};
-const cargarReportesLab = async () => {
-  const snapshot = await getDocs(
-    query(collection(db, "ReporteLab"), orderBy("dictamen", "desc"))
-  );
-  reportesLab.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-};
+    if (dias <= 7) {
+      return buildRiesgo(centro, dias, proximo, "Crítico", "critico", "badge-rojo");
+    }
 
-const cargarCentros = async () => {
-  const snapshot = await getDocs(collection(db, "centros"));
-  centros.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-};
+    if (dias <= 30) {
+      return buildRiesgo(centro, dias, proximo, "Próximo", "proximo", "badge-amarillo");
+    }
 
-const nombreCentro = (id) => {
-  const centro = centros.value.find((c) => c.id === id);
-  return centro ? centro.ubicacion : "Desconocido";
-};
-
-const reportesFiltrados = computed(() => {
-  if (!centroSeleccionado.value) return reportesLab.value;
-  return reportesLab.value.filter((r) => r.centroId === centroSeleccionado.value);
+    return buildRiesgo(centro, dias, proximo, "En regla", "ok", "badge-verde");
+  });
 });
 
-const reportesFiltradosPaginados = computed(() => {
-  const inicio = (paginaActual.value - 1) * porPagina;
-  return reportesFiltrados.value.slice(inicio, inicio + porPagina);
+const buildRiesgo = (centro, dias, fecha, texto, clase, badge) => ({
+  ...centro,
+  riesgo: {
+    dias,
+    texto,
+    fecha: fecha.format("DD/MM/YYYY"),
+    clase,
+    badge,
+  },
 });
 
-const totalPaginas = computed(() => {
-  return Math.ceil(reportesFiltrados.value.length / porPagina);
-});
-
-const formatoFecha = (fecha) => {
-  return new Date(fecha).toLocaleDateString("es-MX");
+/* 🔹 Navegación */
+const verDetalleCentro = (centro) => {
+  router.push({
+    name: "ReportesLaboratorioCentro",
+    params: { centroId: centro.id },
+  });
 };
 
 onMounted(() => {
-  cargarReportesLab();
   cargarCentros();
+  cargarReportesLab();
+  cargarGerentes();
 });
 </script>
 <style scoped>
-/* Base corporativa */
-.infra-table {
+.titulo {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+}
+
+.grid-centros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.6rem;
+}
+
+/* Card */
+.centro-card {
   background: #fff;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-radius: 18px;
+  padding: 1.4rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-left: 6px solid transparent;
 }
 
-.infra-table thead th {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #6c757d;
-  border-bottom: 1px solid #dee2e6;
+.centro-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.15);
 }
 
-.infra-table tbody tr {
-  transition: background 0.15s ease;
+/* Header */
+.centro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.infra-table tbody tr:hover {
-  background: #f8f9fa;
+.centro-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #34495e;
 }
 
-.infra-table td {
-  vertical-align: middle;
-  border-top: none;
-}
-
-/* Pills */
-.type-pill {
-  padding: 4px 10px;
-  border-radius: 12px;
-  background: #eef1f4;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #495057;
-}
-
-.folio-pill {
-  padding: 4px 10px;
-  border-radius: 12px;
-  background: #f1f3f5;
+/* Badge */
+.badge {
+  padding: 4px 12px;
+  border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #212529;
 }
 
-.date-pill {
-  padding: 4px 10px;
-  border-radius: 12px;
-  background: #e9ecef;
-  font-size: 0.75rem;
-  color: #495057;
+.badge-verde {
+  background: #d4edda;
+  color: #155724;
 }
 
-/* Acciones */
-.action-buttons {
-  display: inline-flex;
-  gap: 6px;
+.badge-amarillo {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-rojo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Texto */
+.encargado {
+  font-size: 0.9rem;
+  margin: 0.8rem 0;
+  color: #7f8c8d;
+}
+
+.nombre {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.vencimiento-info {
+  font-size: 0.9rem;
+  color: #34495e;
+}
+
+/* Alerta */
+.alerta {
+  margin-top: 1rem;
+  text-align: center;
+  padding: 0.6rem;
+  border-radius: 10px;
+  background: #fdecea;
+  color: #842029;
+  font-weight: 600;
+  font-size: 0.85rem;
 }
 </style>

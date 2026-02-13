@@ -58,14 +58,14 @@
                   @click="verDetalles(orden)"
                   title="Ver detalles"
                 >
-                  👁
+                  <i class="bi bi-eye"></i>
                 </button>
                 <button
                   class="btn btn-light btn-sm text-danger"
                   @click="eliminarOrden(orden.id)"
                   title="Eliminar"
                 >
-                  🗑
+                  <i class="bi bi-trash"></i>
                 </button>
               </div>
             </td>

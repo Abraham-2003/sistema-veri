@@ -53,7 +53,7 @@
                   @click="abrirModal(centro)"
                   title="Editar"
                 >
-                  ✏️
+                  <i class="bi bi-pencil-square"></i>
                 </button>
 
                 <button
@@ -61,7 +61,7 @@
                   @click="desactivarCentro(centro)"
                   title="Desactivar"
                 >
-                  ⛔
+                  <i class="bi bi-dash-circle"></i>
                 </button>
               </div>
             </td>

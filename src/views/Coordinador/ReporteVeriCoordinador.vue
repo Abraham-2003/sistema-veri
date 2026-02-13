@@ -15,8 +15,21 @@
         {{ mostrarCalendario ? "Ocultar calendario" : "Mostrar calendario" }}
       </button>
 
-      <button class="btn btn-danger" @click="descargarPDF">
-        Descargar reporte en PDF
+      <button
+        class="btn btn-danger d-flex align-items-center gap-2"
+        @click="descargarPDF"
+        :disabled="descargandoPDF"
+      >
+        <span
+          v-if="descargandoPDF"
+          class="spinner-border spinner-border-sm"
+          role="status"
+          aria-hidden="true"
+        ></span>
+
+        <span>
+          {{ descargandoPDF ? "Generando PDF..." : "Descargar reporte en PDF" }}
+        </span>
       </button>
     </div>
 
@@ -182,46 +195,18 @@
             >
               <h6>Imágenes de gases</h6>
 
-              <div class="row g-3">
+              <div v-viewer class="row g-3">
                 <div
                   v-for="(img, index) in reporteSeleccionado.imagenes"
                   :key="index"
                   class="col-6 col-md-4 col-lg-3"
                 >
-                  <div
-                    class="border rounded p-2 h-100 text-center hover-shadow"
-                    @click="abrirImagen(img)"
-                  >
+                  <div class="border rounded p-2 h-100 text-center hover-shadow">
                     <img
                       :src="img"
-                      class="img-fluid rounded"
+                      class="img-fluid rounded imagen-reporte"
                       alt="Imagen del reporte"
-                      style="max-height: 200px; object-fit: contain"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Modal imagen -->
-            <div class="modal fade" id="modalImagen" tabindex="-1" aria-hidden="true">
-              <div class="modal-dialog modal-dialog-centered modal-xl">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h6 class="modal-title">Imagen del reporte</h6>
-                    <button
-                      type="button"
-                      class="btn-close"
-                      data-bs-dismiss="modal"
-                    ></button>
-                  </div>
-
-                  <div class="modal-body text-center">
-                    <img
-                      :src="imagenSeleccionada"
-                      class="img-fluid rounded imagen-zoom"
-                      :class="{ zoom: zoomActivo }"
-                      @click="toggleZoom"
+                      style="max-height: 200px; object-fit: contain; cursor: zoom-in"
                     />
                   </div>
                 </div>
@@ -468,7 +453,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "../../servivces/auth.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -478,26 +463,12 @@ import "vue-cal/dist/vuecal.css";
 import html2pdf from "html2pdf.js";
 import "bootstrap/dist/js/bootstrap.bundle";
 import { Modal } from "bootstrap";
+import { getFunctions, httpsCallable } from "firebase/functions";
+
+const descargandoPDF = ref(false);
 
 const imagenSeleccionada = ref(null);
 let modal = null;
-
-function abrirImagen(url) {
-  imagenSeleccionada.value = url;
-  zoomActivo.value = false;
-
-  if (!modal) {
-    modal = new Modal(document.getElementById("modalImagen"));
-  }
-
-  modal.show();
-}
-
-const zoomActivo = ref(false);
-
-function toggleZoom() {
-  zoomActivo.value = !zoomActivo.value;
-}
 
 const fechasConReporte = ref([]);
 
@@ -591,8 +562,6 @@ const consultarReporte = async () => {
   const snapshot = await getDocs(q);
   const documento = snapshot.empty ? null : snapshot.docs[0].data();
 
-  console.log("[🟢 Documento completo desde Firestore]", documento);
-
   // Si quieres actualizar reporteSeleccionado aquí, hazlo solo si lo vas a usar en el template
   // reporteSeleccionado.value = documento;
 };
@@ -604,16 +573,12 @@ const seleccionarReporteDesdeEvento = (evento) => {
   const encontrado = fechasConReporte.value.find((r) => r.id === id);
 
   if (encontrado) {
-    console.log("[🟡 Reporte seleccionado desde evento]", encontrado);
-
     // Guardar el reporte y la fecha
     reporteSeleccionado.value = encontrado;
     fechaSeleccionada.value = dayjs(encontrado.fecha).format("YYYY-MM-DD HH:mm:ss");
 
     // Consultar el reporte
     consultarReporte();
-
-    // 🔴 Cerrar el calendario automáticamente
     mostrarCalendario.value = false;
   } else {
     console.warn("[⚠️ No se encontró reporte con ID]", id);
@@ -640,26 +605,99 @@ const gasesUsoOrdenados = computed(() =>
 const gasesStockOrdenados = computed(() =>
   ordenarPorTipoGas(Object.values(reporteSeleccionado.value?.gases?.stock || {}).flat())
 );
+async function imagenADataURL(url) {
+  const response = await fetch(url);
+  const blob = await response.blob();
 
-const descargarPDF = () => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+async function prepararImagenes(container) {
+  const imgs = container.querySelectorAll("img");
+
+  for (const img of imgs) {
+    if (img.src.startsWith("http")) {
+      try {
+        const base64 = await imagenADataURL(img.src);
+        img.src = base64;
+      } catch (e) {
+        console.warn("No se pudo convertir imagen", img.src);
+      }
+    }
+  }
+}
+const extraerPathDesdeFirebaseURL = (url) => {
+  const decoded = decodeURIComponent(url);
+  const match = decoded.match(/\/o\/(.+)\?/);
+  return match ? match[1] : null;
+};
+
+const convertirImagenesABase64 = async () => {
+  const functions = getFunctions();
+  const obtenerImagen = httpsCallable(functions, "obtenerImagenBase64");
+
+  const imgs = contenidoReporte.value.querySelectorAll("img");
+
+  for (const img of imgs) {
+    const src = img.getAttribute("src");
+
+    if (!src || !src.includes("firebasestorage.googleapis.com")) continue;
+
+    try {
+      const path = extraerPathDesdeFirebaseURL(src);
+
+      if (!path) {
+        console.warn("No se pudo extraer path:", src);
+        continue;
+      }
+
+      const { data } = await obtenerImagen({ path });
+
+      if (data?.base64) {
+        img.src = data.base64; // 🔥 clave
+      }
+    } catch (error) {
+      console.warn("Imagen omitida:", src, error);
+    }
+  }
+};
+
+const descargarPDF = async () => {
+  if (descargandoPDF.value) return; // evita doble click
+
+  descargandoPDF.value = true;
   modoExportacion.value = true;
 
-  setTimeout(() => {
-    html2pdf()
+  try {
+    await nextTick();
+    await convertirImagenesABase64();
+    await nextTick();
+    await new Promise((r) => setTimeout(r, 300));
+
+    await html2pdf()
       .set({
         margin: 10,
         filename: `Reporte_${ubicacionCentro}_${fechaSeleccionada.value}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 4 },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          scrollY: 0,
+        },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+        pagebreak: { mode: ["css", "legacy"] },
       })
       .from(contenidoReporte.value)
       .save();
-
-    setTimeout(() => {
-      modoExportacion.value = false;
-    }, 1000);
-  }, 500);
+  } catch (error) {
+    console.error("Error al generar PDF", error);
+  } finally {
+    modoExportacion.value = false;
+    descargandoPDF.value = false;
+  }
 };
 
 onMounted(async () => {
@@ -691,15 +729,11 @@ onMounted(async () => {
   cursor: pointer;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
 }
-.imagen-zoom {
-  max-height: 80vh;
-  object-fit: contain;
-  transition: transform 0.3s ease;
-  cursor: zoom-in;
+.imagen-reporte {
+  transition: transform 0.2s ease;
 }
 
-.imagen-zoom.zoom {
-  transform: scale(2);
-  cursor: zoom-out;
+.imagen-reporte:hover {
+  transform: scale(1.03);
 }
 </style>

@@ -7,17 +7,6 @@
       </button>
     </div>
 
-    <!-- Filtro -->
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <select v-model="filtroCentro" class="form-select form-select-sm">
-          <option value="">Todos los centros</option>
-          <option v-for="centro in centros" :key="centro.id" :value="centro.id">
-            {{ centro.ubicacion }}
-          </option>
-        </select>
-      </div>
-    </div>
 
     <!-- Tabla -->
     <div class="table-responsive">
@@ -84,14 +73,14 @@
                   @click="abrirModal(item)"
                   title="Editar"
                 >
-                  ✏️
+                  <i class="bi bi-pencil-square"></i>
                 </button>
                 <button
                   class="btn btn-light btn-sm text-danger"
                   @click="eliminarInfraestructura(item)"
                   title="Eliminar"
                 >
-                  🗑
+                  <i class="bi bi-trash"></i>
                 </button>
               </div>
             </td>
@@ -215,16 +204,20 @@ import Swal from "sweetalert2";
 import {
   collection,
   getDocs,
+  query,
+  where,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
 } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
+import { useRoute } from "vue-router";
 
+const route = useRoute();
+const centroId = route.params.centroId;
 const infraestructura = ref([]);
 const centros = ref([]);
-const filtroCentro = ref("");
 const nuevo = ref({
   elemento: "",
   estatus: "Operativo",
@@ -281,8 +274,16 @@ const eliminarInfraestructura = async (item) => {
 };
 
 const cargarInfraestructura = async () => {
-  const snapshot = await getDocs(collection(db, "infraestructura"));
-  infraestructura.value = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const q = query(
+    collection(db, "infraestructura"),
+    where("centroId", "==", centroId)
+  );
+
+  const snapshot = await getDocs(q);
+  infraestructura.value = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 };
 
 const cargarCentros = async () => {
@@ -328,9 +329,21 @@ const abrirModal = (item = null) => {
 };
 
 const infraestructuraFiltrada = computed(() => {
-  if (!filtroCentro.value) return infraestructura.value;
-  return infraestructura.value.filter((i) => i.centroId === filtroCentro.value);
+  let datos = infraestructura.value;
+
+  // Filtrar SOLO por el centro recibido por ruta
+  if (centroId) {
+    datos = datos.filter(i => i.centroId === centroId);
+  }
+
+  // Ordenar: Fuera de servicio arriba
+  return [...datos].sort((a, b) => {
+    if (a.estatus === "Fuera de servicio" && b.estatus !== "Fuera de servicio") return -1;
+    if (a.estatus !== "Fuera de servicio" && b.estatus === "Fuera de servicio") return 1;
+    return 0;
+  });
 });
+
 
 const obtenerNombreCentro = (id) => {
   const centro = centros.value.find((c) => c.id === id);
@@ -341,10 +354,10 @@ const totalPaginas = computed(() =>
 );
 
 const infraestructuraPaginados = computed(() => {
-  const datosFiltrados = infraestructuraFiltrada.value;
   const inicio = (paginaActual.value - 1) * porPagina;
-  return datosFiltrados.slice(inicio, inicio + porPagina);
+  return infraestructuraFiltrada.value.slice(inicio, inicio + porPagina);
 });
+
 
 onMounted(() => {
   cargarInfraestructura();
@@ -397,8 +410,8 @@ onMounted(() => {
 }
 
 .area-badge {
-  background: #f1f3f5;
-  color: #495057;
+  background: #b34343cf;
+  color: #ffffff;
   font-size: 0.7rem;
 }
 

@@ -1,146 +1,213 @@
 <template>
   <div class="container py-4">
-    <h3 class="mb-4">Histórico de Solicitudes</h3>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-semibold mb-0">Histórico de Solicitudes</h3>
+    </div>
 
-    <!-- Filtro por centro -->
-    <select v-model="filtroCentro" class="form-select mb-3">
-      <option value="">Todos los centros activos</option>
-      <option v-for="centro in centros" :key="centro.id" :value="centro.id">
-        {{ centro.ubicacion }}
-      </option>
-    </select>
+    <!-- Filtro -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <select v-model="filtroCentro" class="form-select form-select-sm">
+          <option value="">Todos los centros activos</option>
+          <option v-for="centro in centros" :key="centro.id" :value="centro.id">
+            {{ centro.ubicacion }}
+          </option>
+        </select>
+      </div>
+    </div>
 
     <!-- Tabla -->
-    <table class="table table-bordered table-hover">
-      <thead class="table-dark">
-        <tr>
-          <th>Centro</th>
-          <th>Tipo</th>
-          <th>Elemento</th>
-          <th>Proveedor o Laboratorio</th>
-          <th>Fecha de Solicitud</th>
-          <th>Fecha de Pago</th>
-          <th>Fecha de Entrega</th>
-          <th>Observaciones</th>
-          <th>Estatus</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="sol in solicitudesFiltradas" :key="sol.id">
-          <td>{{ nombreCentro(sol.centroId) }}</td>
-          <td>{{ sol.tipo }}</td>
-          <td>{{ sol.elemento }}</td>
-          <td>{{ sol.proveedor }}</td>
-          <td>{{ sol.fechaSolicitud }}</td>
-          <td>{{ sol.fechaPago }}</td>
-          <td>{{ sol.fechaEntrega }}</td>
-          <td>{{ sol.observaciones }}</td>
-          <td
-            class="badge"
-            :class="sol.estatus === 'Pendiente' ? 'bg-warning' : 'bg-success'"
-          >
-            {{ sol.estatus }}
-          </td>
-          <td class="text-center">
-            <div class="d-inline-flex gap-2">
-              <button
-                class="btn btn-outline-warning btn-sm"
-                @click="abrirModalEdicion(sol)"
-                title="Editar"
-              >
-                <i class="bi bi-pencil-square"></i>
-              </button>
+    <div class="table-responsive">
+      <table class="table infra-table">
+        <thead>
+          <tr>
+            <th>Centro</th>
+            <th>Tipo</th>
+            <th class="d-none d-lg-table-cell">Proveedor</th>
+            <th>Solicitud</th>
+            <th class="d-none d-md-table-cell">Pago</th>
+            <th class="d-none d-md-table-cell">Entrega</th>
+            <th>Estatus</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
 
-              <a
-                :href="generarLinkWhatsApp(sol)"
-                target="_blank"
-                class="btn btn-success btn-sm"
-                title="Enviar WhatsApp"
+        <tbody>
+          <tr
+            v-for="sol in solicitudesFiltradas"
+            :key="sol.id"
+            @click="abrirModalEdicion(sol)"
+          >
+            <td class="fw-medium cell-indicador">
+              <span v-if="!sol.leida" class="indicador-no-leido"></span>
+
+              {{ nombreCentro(sol.centroId) }}
+            </td>
+            <td>
+              <span class="type-pill">{{ sol.tipo }}</span>
+            </td>
+
+
+            <td class="d-none d-lg-table-cell">
+              {{ sol.proveedor }}
+            </td>
+
+            <td class="text-muted small">
+              {{ sol.fechaSolicitud }}
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ sol.fechaPago || "—" }}
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ sol.fechaEntrega || "—" }}
+            </td>
+            <td>
+              <span
+                class="status-pill"
+                :class="sol.estatus === 'Pendiente' ? 'pending' : 'done'"
               >
-                <i class="bi bi-whatsapp"></i>
-              </a>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+                {{ sol.estatus }}
+              </span>
+            </td>
+
+            <td class="text-end">
+              <div class="action-buttons">
+                <button
+                  class="btn btn-light btn-sm"
+                  @click="abrirModalEdicion(sol)"
+                  title="Editar"
+                >
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+
+                <a
+                  :href="generarLinkWhatsApp(sol)"
+                  target="_blank"
+                  class="btn btn-light btn-sm text-success"
+                  title="Enviar WhatsApp"
+                >
+                  <i class="bi bi-whatsapp"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Paginación -->
-    <nav>
-      <ul class="pagination">
+    <nav class="mt-3">
+      <ul class="pagination pagination-sm justify-content-end">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
           <button class="page-link" @click="paginaActual--">Anterior</button>
         </li>
+
         <li
           class="page-item"
           v-for="n in totalPaginas"
           :key="n"
           :class="{ active: paginaActual === n }"
         >
-          <button class="page-link" @click="paginaActual = n">{{ n }}</button>
+          <button class="page-link" @click="paginaActual = n">
+            {{ n }}
+          </button>
         </li>
+
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
           <button class="page-link" @click="paginaActual++">Siguiente</button>
         </li>
       </ul>
     </nav>
   </div>
+
+  <!-- Modal Edición -->
   <div class="modal fade" id="modalEdicion" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Editar Solicitud</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
+
         <div class="modal-body">
           <div class="mb-2">
-            <label class="form-label">Tipo</label>
-            <input v-model="solicitudEditada.tipo" type="text" class="form-control" />
+            <label class="form-label small">Tipo</label>
+            <input
+              v-model="solicitudEditada.tipo"
+              type="text"
+              class="form-control form-control-sm"
+            />
           </div>
           <div class="mb-2">
-            <label class="form-label">Proveedor</label>
+            <label class="form-label small">Elemento</label>
+            <input
+              v-model="solicitudEditada.elemento"
+              type="text"
+              class="form-control form-control-sm"
+            />
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small">Proveedor</label>
             <input
               v-model="solicitudEditada.proveedor"
               type="text"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Fecha de Solicitud</label>
+            <label class="form-label small">Fecha de Solicitud</label>
             <input
               v-model="solicitudEditada.fechaSolicitud"
               type="date"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Fecha de Pago</label>
+            <label class="form-label small">Fecha de Pago</label>
             <input
               v-model="solicitudEditada.fechaPago"
               type="date"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Fecha de Entrega</label>
+            <label class="form-label small">Fecha de Entrega</label>
             <input
               v-model="solicitudEditada.fechaEntrega"
               type="date"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
+
           <div class="mb-2">
-            <label class="form-label">Observaciones</label>
+            <label class="form-label small">Observaciones</label>
             <textarea
               v-model="solicitudEditada.observaciones"
-              class="form-control"
+              class="form-control form-control-sm"
             ></textarea>
           </div>
         </div>
+
         <div class="modal-footer">
-          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button class="btn btn-success" @click="guardarCambiosSolicitud">
+          <button
+            v-if="solicitudEditada.estatus === 'Pendiente'"
+            class="btn btn-outline-success btn-sm me-auto"
+            @click="finalizarSolicitud"
+          >
+            Marcar como finalizada
+          </button>
+
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button class="btn btn-success btn-sm" @click="guardarCambiosSolicitud">
             Guardar
           </button>
         </div>
@@ -167,17 +234,37 @@ const centros = ref([]);
 const solicitudes = ref([]);
 const filtroCentro = ref("");
 const paginaActual = ref(1);
-const porPagina = 5;
+const porPagina = 15;
 
 const solicitudEditada = ref({});
 const modal = ref(null);
 
 const abrirModalEdicion = (solicitud) => {
   solicitudEditada.value = { ...solicitud };
+
   const modalElement = document.getElementById("modalEdicion");
   modal.value = new bootstrap.Modal(modalElement);
+
+  modalElement.addEventListener(
+    "hidden.bs.modal",
+    async () => {
+      if (!solicitud.leida) {
+        await updateDoc(doc(db, "solicitudes", solicitud.id), {
+          leida: true
+        });
+
+        const index = solicitudes.value.findIndex(s => s.id === solicitud.id);
+        if (index !== -1) {
+          solicitudes.value[index].leida = true;
+        }
+      }
+    },
+    { once: true }
+  );
+
   modal.value.show();
 };
+
 
 const guardarCambiosSolicitud = async () => {
   try {
@@ -191,6 +278,18 @@ const guardarCambiosSolicitud = async () => {
   }
 };
 
+const eliminarSolicitud = async (id) => {
+  const confirmacion = confirm("¿Eliminar esta solicitud?");
+  if (!confirmacion) return;
+
+  try {
+    await deleteDoc(doc(db, "solicitudes", id));
+    console.log("[🗑️ Solicitud eliminada]", id);
+    await cargarSolicitudes();
+  } catch (error) {
+    console.error("[❌ Error al eliminar solicitud]", error);
+  }
+};
 const nombreCentro = (id) => {
   const centro = centros.value.find((c) => c.id === id);
   return centro ? centro.ubicacion : "Centro desconocido";
@@ -216,13 +315,21 @@ const diasEntre = (inicio, fin) => {
   const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
   return isNaN(diff) ? "-" : diff;
 };
+const solicitudesOrdenadas = computed(() => {
+  return [...solicitudes.value].sort((a, b) => {
+    if (a.estatus === "Pendiente" && b.estatus !== "Pendiente") return -1;
+    if (a.estatus !== "Pendiente" && b.estatus === "Pendiente") return 1;
+    return new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud);
+  });
+});
 
 const solicitudesFiltradas = computed(() => {
-  const filtradas = filtroCentro.value
-    ? solicitudes.value.filter((s) => s.centroId === filtroCentro.value)
-    : solicitudes.value;
+  const base = filtroCentro.value
+    ? solicitudesOrdenadas.value.filter((s) => s.centroId === filtroCentro.value)
+    : solicitudesOrdenadas.value;
+
   const inicio = (paginaActual.value - 1) * porPagina;
-  return filtradas.slice(inicio, inicio + porPagina);
+  return base.slice(inicio, inicio + porPagina);
 });
 
 const totalPaginas = computed(() => {
@@ -231,6 +338,18 @@ const totalPaginas = computed(() => {
     : solicitudes.value;
   return Math.ceil(filtradas.length / porPagina);
 });
+const finalizarSolicitud = async () => {
+  try {
+    await updateDoc(doc(db, "solicitudes", solicitudEditada.value.id), {
+      estatus: "Finalizado",
+    });
+
+    modal.value.hide();
+    await cargarSolicitudes();
+  } catch (error) {
+    console.error("Error al finalizar solicitud", error);
+  }
+};
 
 const generarMensajeWhatsApp = (sol) => {
   if (!sol) return "⚠️ Solicitud no disponible";
@@ -258,3 +377,91 @@ onMounted(() => {
   cargarSolicitudes();
 });
 </script>
+<style scoped>
+/* Base tabla corporativa */
+.infra-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+  cursor:pointer;
+}
+
+.infra-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.infra-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.infra-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.infra-table td {
+  vertical-align: middle;
+  border-top: none;
+}
+
+/* Tipo */
+.type-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #eef1f4;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+/* Estatus */
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-pill.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-pill.done {
+  background: #e6f4ea;
+  color: #198754;
+}
+
+/* Observaciones */
+.obs-cell {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Acciones */
+.action-buttons {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.cell-indicador {
+  position: relative;
+  padding-left: 12px !important;
+}
+
+.indicador-no-leido {
+  position: absolute;
+  left: 0;
+  top: 10%;
+  height: 80%;
+  width: 3px;
+  background-color: #0d6efd;
+  border-radius: 1px;
+}
+
+</style>

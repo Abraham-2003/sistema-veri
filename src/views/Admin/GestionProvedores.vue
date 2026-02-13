@@ -44,7 +44,7 @@
                   @click="abrirModal(prov)"
                   title="Editar"
                 >
-                  ✏️
+                  <i class="bi bi-pencil-square"></i>
                 </button>
 
                 <button
@@ -52,7 +52,7 @@
                   @click="eliminarProveedor(prov.id)"
                   title="Eliminar"
                 >
-                  🗑
+                  <i class="bi bi-trash"></i>
                 </button>
               </div>
             </td>

@@ -19,7 +19,12 @@
 
     <!-- Sección Gases -->
     <div v-else-if="seccionActual === 'gases'">
-      <Gases v-model="reporte.gases" @siguiente="avanzarA('imagenes')" />
+      <Gases
+        v-model="reporte.gases"
+        @siguiente="avanzarA('imagenes')"
+        :centro-id="reporte.centroId"
+      />
+
       <div class="mb-3 text-center">
         <button
           class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm"

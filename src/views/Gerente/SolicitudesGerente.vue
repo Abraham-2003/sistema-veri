@@ -45,6 +45,7 @@
               <option value="insumo">Insumo</option>
               <option value="servicio">Servicio</option>
               <option value="mantenimiento">Mantenimiento</option>
+              <option value="Gases especiales">Gases especiales</option>
             </select>
 
             <!-- Elemento -->
@@ -56,8 +57,6 @@
               placeholder="Ej. Cilindro, equipo, etc."
             />
 
-            <!-- Proveedor o laboratorio -->
-            <!-- Botón para abrir selector -->
             <div class="mb-3">
               <label class="form-label">Proveedor o Laboratorio</label>
               <button
@@ -300,6 +299,7 @@ const solicitud = ref({
   observaciones: "",
   centroId: "",
   estatus: "Pendiente",
+  leida: false
 });
 
 const abrirModal = (solicitud) => {
@@ -378,6 +378,7 @@ const guardarSolicitud = async () => {
       observaciones: "",
       centroId: "",
       estatus: "Pendiente",
+      leida: false
     };
   } catch (err) {
     console.error("[❌ Error al guardar solicitud]", err);

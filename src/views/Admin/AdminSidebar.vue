@@ -115,7 +115,6 @@
 import { useRouter } from "vue-router";
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import perfilAbraham from "../../assets/fotoperfil.png";
-import { listenToSolicitudes } from "../../firebase/firestoreListeners";
 
 const router = useRouter();
 const user = ref({ nombre: "", foto: "", rol: "" });
@@ -126,19 +125,18 @@ let stopInfraestructura = null;
 
 onMounted(() => {
   const storedUser = JSON.parse(localStorage.getItem("user"));
-  if (storedUser) {
-    user.value = storedUser;
 
-    if (storedUser.rol === "Administrador") {
-      stopSolicitudes = listenToSolicitudes();
-      console.log("Listeners activados para administrador");
-    } else {
-      console.log("Usuario sin permisos para listeners");
-    }
-  } else {
+  if (!storedUser) {
     console.warn("No se encontró usuario en localStorage");
+    return;
   }
+
+  user.value = storedUser;
+
+  // ❌ Ya NO activamos listeners aquí
+  console.log("Sidebar cargado para", storedUser.rol);
 });
+
 
 onBeforeUnmount(() => {
   if (stopSolicitudes) stopSolicitudes();

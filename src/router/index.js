@@ -4,6 +4,7 @@ import GerentePanel from '../views/Gerente/Dashboard.vue'
 import CoordinadorPanel from '../views/Coordinador/Dashboard.vue'
 import Login from '../views/Login.vue'
 
+
 const routes = [
   {
     path: '/',
@@ -44,6 +45,13 @@ const routes = [
         component: () => import('../views/Admin/ReportesLab.vue')
       },
       {
+        path: 'ReportesLab/:centroId',
+        name: 'ReportesLaboratorioCentro',
+        component: () =>
+          import('../views/Admin/ReportesLaboratorioCentro.vue'),
+        props: true
+      },
+      {
         path: '/reportes/:ubicacion',
         name: 'ReporteVeri',
         component: () => import('../views/Admin/ReporteVeri.vue')
@@ -54,7 +62,16 @@ const routes = [
       },
       {
         path: 'Infraestructura',
-        component: () => import('../views/Admin/AdminInfraestructura.vue')
+        name: 'AdminInfraestructuraCentros',
+        component: () =>
+          import('../views/Admin/AdminInfraestructuraCentros.vue')
+      },
+      {
+        path: 'Infraestructura/:centroId',
+        name: 'AdminInfraestructura',
+        component: () =>
+          import('../views/Admin/AdminInfraestructura.vue'),
+        props: true
       },
       {
         path: 'ConsultasAdmin',
@@ -122,12 +139,28 @@ const routes = [
         component: () => import('../views/Coordinador/ReporteVeriCoordinador.vue')
       },
       {
-        path: 'Reportes Laboratorios',
-        component: () => import('../views/Coordinador/ReportesLabCoordinador.vue'),
+        path: 'ReportesLab',
+        component: () => import('../views/Coordinador/ReportesLabCoordinador.vue')
+      },
+      {
+        path: 'ReportesLab/:centroId',
+        name: 'ReportesLaboratorioCentro',
+        component: () =>
+          import('../views/Coordinador/ReportesLaboratorioCentro.vue'),
+        props: true
       },
       {
         path: 'Infraestructura',
-        component: () => import('../views/Coordinador/CoordinadorInfraestructura.vue'),
+        name: 'CoordinadorInfraestructuraCentros',
+        component: () =>
+          import('../views/Coordinador/CoordinadorInfraestructuraCentros.vue')
+      },
+      {
+        path: 'Infraestructura/:centroId',
+        name: 'CoordinadorInfraestructura',
+        component: () =>
+          import('../views/Coordinador/CoordinadorInfraestructura.vue'),
+        props: true
       },
       {
         path: 'Gestion Lab',

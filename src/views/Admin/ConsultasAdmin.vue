@@ -1,88 +1,102 @@
 <template>
   <div>
-    <h3>Consulta Histórica de Gases</h3>
-    <label class="form-label">Centro</label>
-    <select v-model="centroSeleccionado" class="form-select mb-3">
-      <option value="">Selecciona un centro</option>
-      <option v-for="centro in centros" :key="centro.id" :value="centro.id">
-        {{ centro.nombre }}
-      </option>
-    </select>
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <!-- Título -->
+        <h4 class="fw-semibold mb-4 text-primary">
+          Consulta Histórica de Gases y lineas
+        </h4>
 
-    <div class="d-flex gap-3 mb-3">
-      <input type="date" v-model="fechaInicio" class="form-control" />
-      <input type="date" v-model="fechaFin" class="form-control" />
-      <button class="btn btn-primary" @click="consultarReportes">Consultar</button>
+        <!-- Selector de centro -->
+        <div class="mb-3">
+          <label class="form-label fw-medium">Verificentro</label>
+          <select v-model="centroSeleccionado" class="form-select">
+            <option value="">Selecciona un centro</option>
+            <option v-for="centro in centros" :key="centro.id" :value="centro.id">
+              {{ centro.nombre }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Fechas + botón -->
+        <div class="row g-3 align-items-end mb-4">
+          <div class="col-md-4">
+            <label class="form-label">Fecha inicio</label>
+            <input type="date" v-model="fechaInicio" class="form-control" />
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Fecha fin</label>
+            <input type="date" v-model="fechaFin" class="form-control" />
+          </div>
+
+          <div class="col-md-4 d-grid">
+            <button class="btn btn-primary fw-semibold" @click="consultarReportes">
+              Consultar
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-pills gap-2 mb-3">
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: tab === 'gases' }"
+              @click="tab = 'gases'"
+            >
+              Gases
+            </button>
+          </li>
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: tab === 'lineas' }"
+              @click="tab = 'lineas'"
+            >
+              Líneas
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
 
-    <!-- Tabs -->
-    <ul class="nav nav-tabs mb-3">
-      <li class="nav-item">
-        <button
-          class="nav-link"
-          :class="{ active: tab === 'gases' }"
-          @click="tab = 'gases'"
-        >
-          Gases
-        </button>
-      </li>
-      <li class="nav-item">
-        <button
-          class="nav-link"
-          :class="{ active: tab === 'lineas' }"
-          @click="tab = 'lineas'"
-        >
-          Líneas
-        </button>
-      </li>
-    </ul>
-
     <!-- Contenido de Gases -->
-    <div v-if="tab === 'gases'">
-      <table class="table table-bordered table-sm text-center">
-        <thead class="table-light">
-          <tr>
-            <th>Fecha</th>
-            <th>Gases</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(fila, index) in tablaGases" :key="index">
-            <td>{{ fila.fecha }}</td>
-            <td>
-              <div
-                v-for="gas in fila.gases
-                  .slice()
-                  .sort(
-                    (a, b) => ordenVisual.indexOf(a.tipo) - ordenVisual.indexOf(b.tipo)
-                  )"
-                :key="gas.tipo"
-                class="d-inline-block text-start border rounded px-3 py-2 me-4 mb-3"
-                style="min-width: 250px; background-color: #f8f9fa"
-              >
-                <div class="fw-bold mb-1">{{ gas.tipo }}</div>
+    <div v-if="tab === 'gases'" class="d-flex flex-column gap-4">
+      <div
+        v-for="(fila, index) in tablaGases"
+        :key="index"
+        class="border rounded p-3 shadow-sm"
+      >
+        <!-- Fecha -->
+        <div class="fw-semibold text-primary mb-3">{{ fila.fecha }}</div>
 
-                <div>
-                  <small class="text-muted">Inicial</small>:
-                  <span :class="gas.descontinuado ? 'text-danger fw-bold' : 'fw-bold'">
-                    {{ gas.psiInicial }}
-                  </span>
-                </div>
+        <!-- Gases -->
+        <div class="d-flex flex-wrap gap-3">
+          <div
+            v-for="gas in fila.gases
+              .slice()
+              .sort((a, b) => ordenVisual.indexOf(a.tipo) - ordenVisual.indexOf(b.tipo))"
+            :key="gas.tipo"
+            class="gas-card"
+            :class="{ descontinuado: gas.descontinuado }"
+          >
+            <div class="gas-tipo">{{ gas.tipo }}</div>
 
-                <div>
-                  <small class="text-muted">Final</small>:
-                  <span class="fw-bold">{{ gas.psiFinal }}</span>
-                </div>
+            <div class="gas-info">
+              <span>Inicial</span>
+              <strong>{{ gas.psiInicial }}</strong>
+            </div>
 
-                <div>
-                  <small class="text-muted">Consumo</small>:
-                  <span class="fw-bold">{{ gas.consumo }}</span>
-                </div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            <div class="gas-info">
+              <span>Final</span>
+              <strong>{{ gas.psiFinal }}</strong>
+            </div>
+
+            <div class="gas-consumo">Consumo: {{ gas.consumo }}</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Contenido de Líneas -->
@@ -303,3 +317,40 @@ function procesarGases() {
   tablaGases.value = resultado;
 }
 </script>
+
+<style scoped>
+.gas-card {
+  width: 230px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  transition: transform 0.2s ease;
+}
+
+.gas-card:hover {
+  transform: translateY(-2px);
+}
+
+.gas-card.descontinuado {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+
+.gas-tipo {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.gas-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.gas-consumo {
+  margin-top: 6px;
+  font-weight: 600;
+  color: #198754;
+}
+</style>

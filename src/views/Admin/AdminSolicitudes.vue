@@ -36,11 +36,16 @@
         </thead>
 
         <tbody>
-          <tr v-for="sol in solicitudesFiltradas" :key="sol.id">
-            <td class="fw-medium">
+          <tr
+            v-for="sol in solicitudesFiltradas"
+            :key="sol.id"
+            @click="abrirModalEdicion(sol)"
+          >
+            <td class="fw-medium cell-indicador">
+              <span v-if="!sol.leida" class="indicador-no-leido"></span>
+
               {{ nombreCentro(sol.centroId) }}
             </td>
-
             <td>
               <span class="type-pill">{{ sol.tipo }}</span>
             </td>
@@ -83,7 +88,7 @@
                   @click="abrirModalEdicion(sol)"
                   title="Editar"
                 >
-                  ✏️
+                  <i class="bi bi-pencil-square"></i>
                 </button>
 
                 <button
@@ -91,7 +96,7 @@
                   @click="eliminarSolicitud(sol.id)"
                   title="Eliminar"
                 >
-                  🗑
+                  <i class="bi bi-trash"></i>
                 </button>
 
                 <a
@@ -100,7 +105,7 @@
                   class="btn btn-light btn-sm text-success"
                   title="Enviar WhatsApp"
                 >
-                  💬
+                  <i class="bi bi-whatsapp"></i>
                 </a>
               </div>
             </td>
@@ -113,9 +118,7 @@
     <nav class="mt-3">
       <ul class="pagination pagination-sm justify-content-end">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">
-            Anterior
-          </button>
+          <button class="page-link" @click="paginaActual--">Anterior</button>
         </li>
 
         <li
@@ -130,9 +133,7 @@
         </li>
 
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
-          <button class="page-link" @click="paginaActual++">
-            Siguiente
-          </button>
+          <button class="page-link" @click="paginaActual++">Siguiente</button>
         </li>
       </ul>
     </nav>
@@ -150,7 +151,11 @@
         <div class="modal-body">
           <div class="mb-2">
             <label class="form-label small">Tipo</label>
-            <input v-model="solicitudEditada.tipo" type="text" class="form-control form-control-sm" />
+            <input
+              v-model="solicitudEditada.tipo"
+              type="text"
+              class="form-control form-control-sm"
+            />
           </div>
 
           <div class="mb-2">
@@ -199,6 +204,14 @@
         </div>
 
         <div class="modal-footer">
+          <button
+            v-if="solicitudEditada.estatus === 'Pendiente'"
+            class="btn btn-outline-success btn-sm me-auto"
+            @click="finalizarSolicitud"
+          >
+            Marcar como finalizada
+          </button>
+
           <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
             Cancelar
           </button>
@@ -229,17 +242,37 @@ const centros = ref([]);
 const solicitudes = ref([]);
 const filtroCentro = ref("");
 const paginaActual = ref(1);
-const porPagina = 5;
+const porPagina = 15;
 
 const solicitudEditada = ref({});
 const modal = ref(null);
 
 const abrirModalEdicion = (solicitud) => {
   solicitudEditada.value = { ...solicitud };
+
   const modalElement = document.getElementById("modalEdicion");
   modal.value = new bootstrap.Modal(modalElement);
+
+  modalElement.addEventListener(
+    "hidden.bs.modal",
+    async () => {
+      if (!solicitud.leida) {
+        await updateDoc(doc(db, "solicitudes", solicitud.id), {
+          leida: true
+        });
+
+        const index = solicitudes.value.findIndex(s => s.id === solicitud.id);
+        if (index !== -1) {
+          solicitudes.value[index].leida = true;
+        }
+      }
+    },
+    { once: true }
+  );
+
   modal.value.show();
 };
+
 
 const guardarCambiosSolicitud = async () => {
   try {
@@ -290,13 +323,21 @@ const diasEntre = (inicio, fin) => {
   const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
   return isNaN(diff) ? "-" : diff;
 };
+const solicitudesOrdenadas = computed(() => {
+  return [...solicitudes.value].sort((a, b) => {
+    if (a.estatus === "Pendiente" && b.estatus !== "Pendiente") return -1;
+    if (a.estatus !== "Pendiente" && b.estatus === "Pendiente") return 1;
+    return new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud);
+  });
+});
 
 const solicitudesFiltradas = computed(() => {
-  const filtradas = filtroCentro.value
-    ? solicitudes.value.filter((s) => s.centroId === filtroCentro.value)
-    : solicitudes.value;
+  const base = filtroCentro.value
+    ? solicitudesOrdenadas.value.filter((s) => s.centroId === filtroCentro.value)
+    : solicitudesOrdenadas.value;
+
   const inicio = (paginaActual.value - 1) * porPagina;
-  return filtradas.slice(inicio, inicio + porPagina);
+  return base.slice(inicio, inicio + porPagina);
 });
 
 const totalPaginas = computed(() => {
@@ -305,6 +346,18 @@ const totalPaginas = computed(() => {
     : solicitudes.value;
   return Math.ceil(filtradas.length / porPagina);
 });
+const finalizarSolicitud = async () => {
+  try {
+    await updateDoc(doc(db, "solicitudes", solicitudEditada.value.id), {
+      estatus: "Finalizado",
+    });
+
+    modal.value.hide();
+    await cargarSolicitudes();
+  } catch (error) {
+    console.error("Error al finalizar solicitud", error);
+  }
+};
 
 const generarMensajeWhatsApp = (sol) => {
   if (!sol) return "⚠️ Solicitud no disponible";
@@ -338,6 +391,7 @@ onMounted(() => {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
+  cursor:pointer;
 }
 
 .infra-table thead th {
@@ -402,4 +456,20 @@ onMounted(() => {
   display: inline-flex;
   gap: 6px;
 }
+
+.cell-indicador {
+  position: relative;
+  padding-left: 12px !important;
+}
+
+.indicador-no-leido {
+  position: absolute;
+  left: 0;
+  top: 10%;
+  height: 80%;
+  width: 3px;
+  background-color: #0d6efd;
+  border-radius: 1px;
+}
+
 </style>

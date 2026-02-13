@@ -64,7 +64,7 @@
         Reportes
       </router-link>
       <router-link
-        to="/Coordinador/Reportes Laboratorios"
+        to="/Coordinador/ReportesLab"
         class="nav-link text-white py-2 px-3 rounded mb-1"
         active-class="bg-secondary"
       >
@@ -112,7 +112,6 @@
 import { useRouter } from "vue-router";
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import perfilAbraham from "../../assets/fotoperfil.png";
-import { listenToSolicitudes } from "../../firebase/firestoreListeners";
 
 const router = useRouter();
 const user = ref({ nombre: "", foto: "", rol: "" });
@@ -123,19 +122,18 @@ let stopInfraestructura = null;
 
 onMounted(() => {
   const storedUser = JSON.parse(localStorage.getItem("user"));
-  if (storedUser) {
-    user.value = storedUser;
 
-    if (storedUser.rol === "Coordinador") {
-      stopSolicitudes = listenToSolicitudes();
-      console.log("Listeners activados para Coordinador");
-    } else {
-      console.log("Usuario sin permisos para listeners");
-    }
-  } else {
+  if (!storedUser) {
     console.warn("No se encontró usuario en localStorage");
+    return;
   }
+
+  user.value = storedUser;
+
+  // ❌ Ya NO activamos listeners aquí
+  console.log("Sidebar cargado para", storedUser.rol);
 });
+
 
 onBeforeUnmount(() => {
   if (stopSolicitudes) stopSolicitudes();

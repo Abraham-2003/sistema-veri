@@ -1,96 +1,220 @@
 <template>
   <div class="container py-4">
-    <h3 class="mb-4">Gestión de Centros</h3>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-semibold mb-0">Gestión de Centros</h3>
 
-    <button class="btn btn-success mb-3" @click="abrirModal()">Nuevo Centro</button>
+      <button class="btn btn-success btn-sm" @click="abrirModal()">
+        Nuevo centro
+      </button>
+    </div>
 
     <!-- Tabla -->
-    <table class="table table-bordered table-hover">
-      <thead class="table-dark">
-        <tr>
-          <th>Ubicación</th>
-          <th>Encargado</th>
-          <th>Lineas</th>
-          <th>Estatus</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="centro in centrosPaginados" :key="centro.id">
-          <td>{{ centro.ubicacion }}</td>
-          <td>{{ nombreEncargado(centro.encargado) }}</td>
-          <td>{{ centro.lineas }}</td>
-          <td>
-            <span :class="centro.estatus === 'Activo' ? 'text-success' : 'text-danger'">
-              {{ centro.estatus }}
-            </span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table infra-table">
+        <thead>
+          <tr>
+            <th>Ubicación</th>
+            <th class="d-none d-md-table-cell">Encargado</th>
+            <th>Líneas</th>
+            <th>Estatus</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr v-for="centro in centrosPaginados" :key="centro.id">
+            <td class="fw-medium">
+              {{ centro.ubicacion }}
+            </td>
+
+            <td class="d-none d-md-table-cell text-muted small">
+              {{ nombreEncargado(centro.encargado) }}
+            </td>
+
+            <td>
+              <span class="lines-pill">
+                {{ centro.lineas }}
+              </span>
+            </td>
+
+            <td>
+              <span
+                class="status-pill"
+                :class="centro.estatus === 'Activo' ? 'status-active' : 'status-inactive'"
+              >
+                {{ centro.estatus }}
+              </span>
+            </td>
+
+            
+          </tr>
+
+          <tr v-if="centrosPaginados.length === 0">
+            <td colspan="5" class="text-center text-muted py-4">
+              No hay centros registrados
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Paginación -->
-    <nav>
-      <ul class="pagination">
+    <nav class="mt-3">
+      <ul class="pagination pagination-sm justify-content-center">
         <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-          <button class="page-link" @click="paginaActual--">Anterior</button>
+          <button class="page-link" @click="paginaActual--">
+            Anterior
+          </button>
         </li>
-        <li
-          class="page-item"
-          v-for="n in totalPaginas"
-          :key="n"
-          :class="{ active: paginaActual === n }"
-        >
-          <button class="page-link" @click="paginaActual = n">{{ n }}</button>
+
+        <li class="page-item disabled">
+          <span class="page-link">
+            Página {{ paginaActual }}
+          </span>
         </li>
+
         <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
-          <button class="page-link" @click="paginaActual++">Siguiente</button>
+          <button class="page-link" @click="paginaActual++">
+            Siguiente
+          </button>
         </li>
       </ul>
     </nav>
-
     <!-- Modal -->
     <div class="modal fade" id="modalCentro" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
-        <form class="modal-content" @submit.prevent="guardarCentro">
-          <div class="modal-header">
-            <h5 class="modal-title">{{ editando ? "Editar Centro" : "Nuevo Centro" }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form
+          class="modal-content shadow-lg border-0 rounded-4"
+          @submit.prevent="guardarCentro"
+        >
+          <div class="modal-header bg-primary text-white rounded-top-4">
+            <h5 class="modal-title fw-semibold mb-0">
+              {{ editando ? "Editar Centro" : "Nuevo Centro" }}
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+            ></button>
           </div>
-          <div class="modal-body">
-          
-            <input
-              v-model="nuevo.ubicacion"
-              placeholder="Ubicación"
-              class="form-control mb-2"
-            />
-            <input
-              v-model="nuevo.lineas"
-              placeholder="Número de líneas"
-              type="number"
-              class="form-control mb-2"
-            />
-            <select v-model="nuevo.lineaDual" class="form-select mb-2">
-              <option disabled value="">Selecciona la línea dual</option>
-              <option v-for="n in parseInt(nuevo.lineas) || 0" :key="n" :value="n">
-                Línea {{ n }}
-              </option>
-            </select>
-            <select v-model="nuevo.encargado" class="form-select mb-2">
-              <option disabled value="">Selecciona un encargado</option>
-              <option v-for="gerente in gerentes" :key="gerente.id" :value="gerente.id">
-                {{ gerente.nombre }}
-              </option>
-            </select>
-            <select v-model="nuevo.estatus" class="form-select mb-2">
-              <option value="Activo">Activo</option>
-              <option value="Desactivado">Desactivado</option>
-            </select>
+
+          <div class="modal-body p-4">
+            <h6 class="fw-bold text-secondary mb-3">Información general</h6>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Ubicación</label>
+                <input
+                  v-model="nuevo.ubicacion"
+                  placeholder="Ej. Zona Norte"
+                  class="form-control"
+                />
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">N° de líneas</label>
+                <input
+                  v-model="nuevo.lineas"
+                  type="number"
+                  placeholder="Ej. 3"
+                  class="form-control"
+                />
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Línea dual</label>
+                <select v-model="nuevo.lineaDual" class="form-select">
+                  <option disabled value="">Selecciona</option>
+                  <option v-for="n in parseInt(nuevo.lineas) || 0" :key="n" :value="n">
+                    Línea {{ n }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Encargado</label>
+                <select v-model="nuevo.encargado" class="form-select">
+                  <option disabled value="">Selecciona un encargado</option>
+                  <option
+                    v-for="gerente in gerentes"
+                    :key="gerente.id"
+                    :value="gerente.id"
+                  >
+                    {{ gerente.nombre }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Estatus</label>
+                <select v-model="nuevo.estatus" class="form-select">
+                  <option value="Activo">Activo</option>
+                  <option value="Desactivado">Desactivado</option>
+                </select>
+              </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h6 class="fw-bold text-secondary mb-3">Microbanca por línea</h6>
+
+            <div
+              v-for="(linea, index) in nuevo.microbancaPorLinea"
+              :key="index"
+              class="border rounded-3 p-3 mb-3 bg-light"
+            >
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-primary">Línea {{ index + 1 }}</strong>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">Marca</label>
+                  <input v-model="linea.marca" placeholder="Marca" class="form-control" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">N° de serie</label>
+                  <input
+                    v-model="linea.serie"
+                    placeholder="Serie principal"
+                    class="form-control"
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">N° de serie NOX</label>
+                  <input
+                    v-model="linea.serieNox"
+                    placeholder="Serie NOX"
+                    class="form-control"
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">N° de serie Oxígeno</label>
+                  <input
+                    v-model="linea.serieOxigeno"
+                    placeholder="Serie Oxígeno"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+              <div class="col-md-6" v-if="nuevo.lineaDual == index + 1">
+                <label class="form-label small fw-semibold">Opacímetro</label>
+                <input
+                  v-model="linea.opacimetro"
+                  placeholder="Serie del opacímetro"
+                  class="form-control"
+                />
+              </div>
+            </div>
           </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guardar</button>
+
+          <div class="modal-footer bg-light rounded-bottom-4">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Cancelar
             </button>
+            <button type="submit" class="btn btn-primary px-4">Guardar</button>
           </div>
         </form>
       </div>
@@ -99,14 +223,49 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { db } from "../../servivces/auth.js";
 import { collection, getDocs, addDoc, updateDoc, doc, setDoc } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const centros = ref([]);
 const gerentes = ref([]);
-const nuevo = ref({ ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:""  });
+const nuevo = ref({
+  ubicacion: "",
+  lineas: "",
+  encargado: "",
+  estatus: "Activo",
+  lineaDual: "",
+  microbancaPorLinea: [],
+});
+
+watch(
+  () => nuevo.value.lineas,
+  (lineas) => {
+    const n = parseInt(lineas);
+    if (!isNaN(n)) {
+      nuevo.value.microbancaPorLinea = Array.from({ length: n }, (_, i) => {
+        const existente = nuevo.value.microbancaPorLinea[i] || {};
+        const base = {
+          marca: existente.marca || "",
+          serie: existente.serie || "",
+          serieNox: existente.serieNox || "",
+          serieOxigeno: existente.serieOxigeno || "",
+        };
+
+        // Si esta línea es la línea dual, incluir opacimetro
+        if (nuevo.value.lineaDual == i + 1) {
+          base.opacimetro = existente.opacimetro || "";
+        }
+
+        return base;
+      });
+    } else {
+      nuevo.value.microbancaPorLinea = [];
+    }
+  }
+);
+
 const editando = ref(null);
 const paginaActual = ref(1);
 const porPagina = 10;
@@ -135,7 +294,6 @@ const guardarCentro = async () => {
     centroId = editando.value;
     editando.value = null;
   } else {
-    // Crear nuevo centro
     const centroRef = await addDoc(collection(db, "centros"), { ...nuevo.value });
     centroId = centroRef.id;
   }
@@ -152,12 +310,29 @@ const guardarCentro = async () => {
 
 const abrirModal = (centro = null) => {
   if (centro) {
-    nuevo.value = { ...centro };
+    nuevo.value = {
+      ubicacion: centro.ubicacion || "",
+      lineas: centro.lineas || "",
+      encargado: centro.encargado || "",
+      estatus: centro.estatus || "Activo",
+      lineaDual: centro.lineaDual || "",
+      microbancaPorLinea: Array.isArray(centro.microbancaPorLinea)
+        ? centro.microbancaPorLinea
+        : [],
+    };
     editando.value = centro.id;
   } else {
-    nuevo.value = { ubicacion: "", lineas: "", encargado: "", estatus: "Activo", lineaDual:""  };
+    nuevo.value = {
+      ubicacion: "",
+      lineas: "",
+      encargado: "",
+      estatus: "Activo",
+      lineaDual: "",
+      microbancaPorLinea: [],
+    };
     editando.value = null;
   }
+
   new bootstrap.Modal(document.getElementById("modalCentro")).show();
 };
 
@@ -177,3 +352,80 @@ onMounted(() => {
   cargarGerentes();
 });
 </script>
+<style scoped>
+.modal-content {
+  transition: all 0.3s ease-in-out;
+}
+.modal-header {
+  border-bottom: none;
+}
+.modal-footer {
+  border-top: none;
+}
+.form-label {
+  color: #495057;
+}
+.bg-light {
+  background-color: #f8f9fa !important;
+}
+/* Base corporativa */
+.infra-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.infra-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.infra-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.infra-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.infra-table td {
+  vertical-align: middle;
+  border-top: none;
+}
+
+/* Pills */
+.lines-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #eef1f4;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-active {
+  background: #e6f4ea;
+  color: #198754;
+}
+
+.status-inactive {
+  background: #fdecea;
+  color: #dc3545;
+}
+
+/* Acciones */
+.action-buttons {
+  display: inline-flex;
+  gap: 6px;
+}
+</style>
