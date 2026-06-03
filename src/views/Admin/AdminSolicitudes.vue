@@ -15,6 +15,18 @@
           </option>
         </select>
       </div>
+      <!-- Filtro por proveedor -->
+      <div class="col-md-4">
+        <select v-model="filtroProveedor" class="form-select form-select-sm">
+          <option value="">Todos los proveedores</option>
+          <option v-for="prov in proveedoresUnicos" :key="prov" :value="prov">
+            {{ prov }}
+          </option>
+        </select>
+      </div>
+      <button class="btn btn-success btn-sm mb-3" @click="exportarExcel">
+        Descargar Excel
+      </button>
     </div>
 
     <!-- Tabla -->
@@ -237,6 +249,8 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const centros = ref([]);
 const solicitudes = ref([]);
@@ -251,17 +265,19 @@ const abrirModalEdicion = (solicitud) => {
   solicitudEditada.value = { ...solicitud };
 
   const modalElement = document.getElementById("modalEdicion");
-  modal.value = new bootstrap.Modal(modalElement);
+
+  // 🔥 Usa la instancia existente o créala solo si no existe
+  modal.value = bootstrap.Modal.getOrCreateInstance(modalElement);
 
   modalElement.addEventListener(
     "hidden.bs.modal",
     async () => {
       if (!solicitud.leida) {
         await updateDoc(doc(db, "solicitudes", solicitud.id), {
-          leida: true
+          leida: true,
         });
 
-        const index = solicitudes.value.findIndex(s => s.id === solicitud.id);
+        const index = solicitudes.value.findIndex((s) => s.id === solicitud.id);
         if (index !== -1) {
           solicitudes.value[index].leida = true;
         }
@@ -272,7 +288,6 @@ const abrirModalEdicion = (solicitud) => {
 
   modal.value.show();
 };
-
 
 const guardarCambiosSolicitud = async () => {
   try {
@@ -331,21 +346,39 @@ const solicitudesOrdenadas = computed(() => {
   });
 });
 
+const filtroProveedor = ref("");
+
+// Lista única de proveedores
+const proveedoresUnicos = computed(() => {
+  const set = new Set(solicitudes.value.map((s) => s.proveedor).filter(Boolean));
+  return Array.from(set);
+});
+
 const solicitudesFiltradas = computed(() => {
-  const base = filtroCentro.value
-    ? solicitudesOrdenadas.value.filter((s) => s.centroId === filtroCentro.value)
-    : solicitudesOrdenadas.value;
+  let base = solicitudesOrdenadas.value;
+
+  if (filtroCentro.value) {
+    base = base.filter((s) => s.centroId === filtroCentro.value);
+  }
+  if (filtroProveedor.value) {
+    base = base.filter((s) => s.proveedor === filtroProveedor.value);
+  }
 
   const inicio = (paginaActual.value - 1) * porPagina;
   return base.slice(inicio, inicio + porPagina);
 });
 
 const totalPaginas = computed(() => {
-  const filtradas = filtroCentro.value
-    ? solicitudes.value.filter((s) => s.centroId === filtroCentro.value)
-    : solicitudes.value;
+  let filtradas = solicitudes.value;
+  if (filtroCentro.value) {
+    filtradas = filtradas.filter((s) => s.centroId === filtroCentro.value);
+  }
+  if (filtroProveedor.value) {
+    filtradas = filtradas.filter((s) => s.proveedor === filtroProveedor.value);
+  }
   return Math.ceil(filtradas.length / porPagina);
 });
+
 const finalizarSolicitud = async () => {
   try {
     await updateDoc(doc(db, "solicitudes", solicitudEditada.value.id), {
@@ -379,7 +412,26 @@ const generarLinkWhatsApp = (sol) => {
   const mensaje = generarMensajeWhatsApp(sol);
   return `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
 };
+const exportarExcel = () => {
+  // Usa las solicitudes filtradas actuales
+  const hoja = solicitudesFiltradas.value.map((s) => ({
+    Centro: nombreCentro(s.centroId),
+    Proveedor: s.proveedor,
+    Tipo: s.tipo,
+    Elemento: s.elemento,
+    FechaSolicitud: s.fechaSolicitud,
+    FechaPago: s.fechaPago || "",
+    FechaEntrega: s.fechaEntrega || "",
+    Estatus: s.estatus,
+    Observaciones: s.observaciones || "",
+  }));
 
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(hoja);
+  XLSX.utils.book_append_sheet(wb, ws, "Solicitudes");
+  const blob = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  saveAs(new Blob([blob]), "solicitudes.xlsx");
+};
 onMounted(() => {
   cargarCentros();
   cargarSolicitudes();
@@ -391,7 +443,7 @@ onMounted(() => {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
-  cursor:pointer;
+  cursor: pointer;
 }
 
 .infra-table thead th {
@@ -471,5 +523,4 @@ onMounted(() => {
   background-color: #0d6efd;
   border-radius: 1px;
 }
-
 </style>

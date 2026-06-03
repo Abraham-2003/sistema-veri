@@ -129,9 +129,9 @@
                 class="form-select form-select-sm"
               >
                 <option disabled value="">Selecciona un rol</option>
-                <option value="Administrador">Administrador</option>
                 <option value="Coordinador">Coordinador</option>
                 <option value="Gerente">Gerente</option>
+                <option value="Recursos Humanos">Recursos Humanos</option>
               </select>
             </div>
           </div>

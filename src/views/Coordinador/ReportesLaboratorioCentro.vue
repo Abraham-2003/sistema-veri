@@ -17,9 +17,10 @@
             <th>Línea</th>
             <th>Folio</th>
             <th>Dictamen</th>
+            <th>Fecha de calibracion</th>
             <th>Vencimiento</th>
             <th class="d-none d-md-table-cell">Centro</th>
-            
+            <th>Acciones</th>
           </tr>
         </thead>
 
@@ -53,6 +54,9 @@
             <td class="text-muted small">
               {{ formatoFecha(reporte.dictamen) }}
             </td>
+            <td class="text-muted small">
+              {{ formatoFecha(reporte.calibracion) }}
+            </td>
 
             <td>
               <span class="date-pill">
@@ -62,6 +66,24 @@
 
             <td class="d-none d-md-table-cell">
               {{ nombreCentro(reporte.centroId) }}
+            </td>
+             <td class="text-end">
+              <div class="action-buttons">
+                <!-- Botón Ver PDF solo si existe -->
+                <template v-if="reporte.pdfUrl">
+                  <a
+                    :href="reporte.pdfUrl"
+                    target="_blank"
+                    class="btn btn-light btn-sm text-success"
+                    title="Ver PDF"
+                  >
+                    <i class="bi bi-file-earmark-pdf"></i>
+                  </a>
+                </template>
+
+                <!-- Botones de edición y eliminación -->
+                
+              </div>
             </td>
           </tr>
         </tbody>

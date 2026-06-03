@@ -4,7 +4,7 @@
       <div class="dashboard-header">
         <div>
           <h2>Bienvenido, {{ user.nombre || "Administrador" }}</h2>
-          <p class="text-muted">Resumen general del sistema y desempeño operativo</p>
+          <p class="text-muted">Resumen general del sistema y desempeño operativo.</p>
         </div>
       </div>
 
@@ -42,6 +42,68 @@
           <i class="bi bi-exclamation-triangle stat-icon"></i>
         </div>
       </div>
+      <h3 class="subtitulo">Próximos eventos</h3>
+
+      <div class="upcoming-card">
+        <div class="upcoming-header">
+          <span>Agenda próxima</span>
+          <i class="bi bi-calendar-event"></i>
+        </div>
+
+        <div v-if="upcomingEvents.length === 0" class="empty-upcoming">
+          No hay eventos próximos
+        </div>
+
+        <div v-else class="upcoming-list">
+          <div v-for="e in upcomingEvents" :key="e.id" class="upcoming-item">
+            <div class="date">
+              {{ formatDate(e.date) }}
+            </div>
+
+            <div class="info">
+              <strong>{{ e.title }}</strong>
+              <span class="assigned"> 👤 {{ e.assignedToName || e.userName }} </span>
+            </div>
+
+            <span class="danger" :class="e.importance">
+              {{ e.importance }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <h3 class="subtitulo">Arqueos diarios</h3>
+      <div class="arqueos-config mb-3 d-flex gap-3 align-items-end">
+        <div>
+          <label>Cantidad de arqueos:</label>
+          <input type="number" v-model="cantidadArqueos" min="1" class="form-control" />
+        </div>
+        <button class="btn btn-primary" @click="iniciarGeneracion">
+          Generar arqueos
+        </button>
+      </div>
+
+      <div v-if="arqueosGenerados.length > 0" class="arqueos-list mt-3">
+        <h5>Arqueos generados</h5>
+
+        <!-- Contenedor con scroll -->
+        <div class="arqueos-scroll">
+          <div v-for="(a, index) in arqueosGenerados" :key="index" class="arqueo-card">
+            <div class="arqueo-header">
+              <strong>Arqueo {{ a.arqueoNum }}</strong>
+              <span class="badge bg-info">{{ a.centro }}</span>
+            </div>
+            <div class="arqueo-body">
+              <span class="text-muted">Horario: {{ a.horario }}</span>
+              <p class="mensaje">{{ a.mensaje }}</p>
+            </div>
+            <div class="arqueo-actions">
+              <button class="btn btn-success btn-sm" @click="enviarWhatsApp(a.mensaje)">
+                📲 Enviar WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Accesos rápidos -->
       <h3 class="subtitulo">Accesos Rápidos</h3>
@@ -62,6 +124,7 @@
   <div>
     <h4 class="section-title">Desempeño por Verificentro</h4>
 
+    <!-- Selector de centro -->
     <select v-model="centroSeleccionado" class="form-select mb-4">
       <option disabled value="">Selecciona un centro</option>
       <option v-for="(centro, id) in centros" :key="id" :value="id">
@@ -69,107 +132,22 @@
       </option>
     </select>
 
-    <div v-if="centroSeleccionado" class="d-flex flex-wrap justify-content-center gap-4">
-      <!-- Tarjeta 1: Indicadores principales -->
-      <div
-        class="card shadow-sm border border-secondary-subtle"
-        style="width: 400px; height: 280px"
-      >
-        <div class="card-body">
-          <Bar
-            :data="{
-              labels: ['Reportes', 'Cumplimiento (%)', 'Fallas'],
-              datasets: [
-                {
-                  label: resumenPorCentro[centroSeleccionado].ubicacion,
-                  data: [
-                    resumenPorCentro[centroSeleccionado].reportes,
-                    resumenPorCentro[centroSeleccionado].cumplimiento,
-                    resumenPorCentro[centroSeleccionado].fallas,
-                  ],
-                  backgroundColor: ['#198754', '#0d6efd', '#dc3545'],
-                },
-              ],
-            }"
-            :options="{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Indicadores principales' },
-              },
-              scales: {
-                y: { beginAtZero: true },
-              },
-            }"
-          />
-        </div>
+    <!-- Filtros de fecha -->
+    <div v-if="centroSeleccionado" class="mb-3 d-flex gap-3">
+      <div>
+        <label>Fecha inicio:</label>
+        <input type="date" v-model="fechaInicio" />
       </div>
+      <div>
+        <label>Fecha fin:</label>
+        <input type="date" v-model="fechaFin" />
+      </div>
+      <button class="btn btn-primary" @click="cargarReportesCentro">Filtrar</button>
+    </div>
 
-      <!-- Tarjeta 2: Consumo de gases -->
-      <div
-        class="card shadow-sm border border-secondary-subtle"
-        style="width: 400px; height: 280px"
-      >
-        <div class="card-body">
-          <Bar
-            :data="{
-              labels: Object.keys(resumenPorCentro[centroSeleccionado].consumoGases),
-              datasets: [
-                {
-                  label: 'Consumo de gases (PSI)',
-                  data: Object.values(resumenPorCentro[centroSeleccionado].consumoGases),
-                  backgroundColor: ['#ffc107', '#20c997', '#6f42c1'],
-                },
-              ],
-            }"
-            :options="{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Consumo de gases en uso' },
-              },
-              scales: {
-                y: { beginAtZero: true },
-              },
-            }"
-          />
-        </div>
-      </div>
-      <div
-        class="card shadow-sm border border-secondary-subtle"
-        style="width: 400px; height: 280px"
-      >
-        <div class="card-body">
-          <Bar
-            :data="{
-              labels: ['Pendientes', 'Finalizadas'],
-              datasets: [
-                {
-                  label: 'Solicitudes',
-                  data: [
-                    solicitudesPorCentro[centroSeleccionado]?.Pendiente || 0,
-                    solicitudesPorCentro[centroSeleccionado]?.Finalizado || 0,
-                  ],
-                  backgroundColor: ['#ffc107', '#198754', '#dc3545'],
-                },
-              ],
-            }"
-            :options="{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Solicitudes por estatus' },
-              },
-              scales: {
-                y: { beginAtZero: true },
-              },
-            }"
-          />
-        </div>
-      </div>
+    <!-- Gráfica de líneas -->
+    <div v-if="chartData" style="width: 100%; max-width: 800px; height: 400px">
+      <Line :data="chartData" :options="chartOptions" />
     </div>
   </div>
 </template>
@@ -178,30 +156,44 @@
 import { ref, onMounted, computed } from "vue";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../servivces/auth.js"; // ajusta según tu ruta
-import { Bar } from "vue-chartjs";
+import { Bar, Line } from "vue-chartjs";
 import {
   Chart as ChartJS,
   Title,
   Tooltip,
   Legend,
   BarElement,
+  LineElement,
+  PointElement,
   CategoryScale,
   LinearScale,
 } from "chart.js";
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale
+);
+
+dayjs.extend(isSameOrBefore);
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+
 dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 const user = ref(JSON.parse(localStorage.getItem("user")) || {});
 const centrosActivos = ref(0);
 const solicitudesActivas = ref(0);
 const reportesHoy = ref(0);
 const infraestructuraFueraServicio = ref(0);
-const inicioMes = dayjs().startOf("month");
-const hoy = dayjs().endOf("day");
-
+const events = ref([]);
 async function obtenerReportesHoy() {
   const inicioDia = dayjs().startOf("day").toISOString();
   const finDia = dayjs().endOf("day").toISOString();
@@ -216,6 +208,19 @@ async function obtenerReportesHoy() {
   reportesHoy.value = snapshot.size;
 }
 
+async function cargarEventos() {
+  try {
+    const snapshot = await getDocs(collection(db, "events"));
+
+    events.value = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error("[Error eventos]", error);
+    events.value = [];
+  }
+}
 async function obtenerCentrosActivos() {
   const q = query(collection(db, "centros"), where("estatus", "==", "Activo"));
   const snapshot = await getDocs(q);
@@ -230,7 +235,6 @@ async function obtenerSolicitudesActivas() {
 const cargarInfraestructuraFueraServicio = async () => {
   try {
     const snapshot = await getDocs(collection(db, "infraestructura"));
-
     infraestructuraFueraServicio.value = snapshot.docs.filter(
       (doc) => doc.data().estatus === "Fuera de servicio"
     ).length;
@@ -239,169 +243,393 @@ const cargarInfraestructuraFueraServicio = async () => {
     infraestructuraFueraServicio.value = 0;
   }
 };
+const upcomingEvents = computed(() => {
+  const today = dayjs().format("YYYY-MM-DD");
 
-onMounted(async () => {
-  await obtenerCentrosActivos();
-  await obtenerSolicitudesActivas();
-  await obtenerReportesHoy();
-  cargarInfraestructuraFueraServicio();
+  return events.value
+    .filter((e) => e.date && e.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
 });
-
-const centros = ref({});
+const formatDate = (date) => {
+  return dayjs(date).format("DD MMM");
+};
+const centros = ref([]);
 const resumenPorCentro = ref({});
 const centroSeleccionado = ref("");
 
+// filtros de fecha para la gráfica
+const fechaInicio = ref(dayjs().startOf("month").format("YYYY-MM-DD"));
+const fechaFin = ref(dayjs().endOf("day").format("YYYY-MM-DD"));
+
+// datos para la gráfica
+const chartData = ref(null);
+const chartOptions = {
+  responsive: true,
+  plugins: {
+    title: {
+      display: true,
+      text: "Lecturas de gases por día",
+    },
+  },
+};
+
 async function cargarCentros() {
   const snapshot = await getDocs(collection(db, "centros"));
-  snapshot.forEach((doc) => {
-    centros.value[doc.id] = doc.data();
-  });
-}
-function contarDiasHabiles(inicio, fin) {
-  let dias = 0;
-  let fecha = inicio.clone();
-
-  while (fecha.isSameOrBefore(fin, "day")) {
-    if (fecha.day() !== 0) {
-      // 0 = domingo
-      dias++;
-    }
-    fecha = fecha.add(1, "day");
-  }
-
-  return dias;
+  centros.value = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(), // aquí debe venir "ubicacion"
+  }));
 }
 
-function calcularConsumoPorCiclos(registros) {
-  let consumoTotal = 0;
-  let psiInicial = null;
+// … funciones de consumo y resumen que ya tenías …
 
-  registros.forEach((registro, i) => {
-    const psiActual = registro.psi;
+// nueva función para cargar reportes del centro seleccionado y graficar
+async function cargarReportesCentro() {
+  if (!centroSeleccionado.value) return;
 
-    if (psiInicial === null) {
-      psiInicial = psiActual;
-      return;
-    }
+  const inicio = dayjs(fechaInicio.value);
+  const fin = dayjs(fechaFin.value);
 
-    const psiAnterior = registros[i - 1].psi;
+  const q = query(
+    collection(db, "reportes"),
+    where("centroId", "==", centroSeleccionado.value)
+  );
+  const snapshot = await getDocs(q);
 
-    // Cuando se cambia el tanque (sube el PSI)
-    if (psiActual > psiAnterior) {
-      consumoTotal += psiInicial - psiAnterior;
-      psiInicial = psiActual;
-    }
+  const datos = snapshot.docs.map((doc) => doc.data());
 
-    // Último registro
-    if (i === registros.length - 1) {
-      consumoTotal += psiInicial - psiActual;
-    }
+  const filtrados = datos.filter((r) => {
+    const fecha = dayjs(r.fecha);
+    return fecha.isSameOrAfter(inicio, "day") && fecha.isSameOrBefore(fin, "day");
   });
 
-  return consumoTotal;
-}
-async function cargarReportes() {
-  const snapshot = await getDocs(collection(db, "reportes"));
-  const agrupado = {};
-
-  const inicioMes = dayjs().startOf("month");
-  const hoy = dayjs().endOf("day");
-
-  snapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    const centroId = data.centroId;
-
-    if (!data.fecha) return;
-
-    const fechaReporte = dayjs(data.fecha);
-
-    if (fechaReporte.isBefore(inicioMes) || fechaReporte.isAfter(hoy)) {
-      return;
-    }
-
-    if (!agrupado[centroId]) {
-      agrupado[centroId] = {
-        reportes: 0,
-        fallas: 0,
-        gases: { Baja: [], Media: [], Cero: [] },
-      };
-    }
-
-    agrupado[centroId].reportes++;
-
-    const lineas = data.lineas || {};
-    Object.values(lineas).forEach((linea) => {
-      if (["Apagada", "Fuera de servicio"].includes(linea.estado)) {
-        agrupado[centroId].fallas++;
-      }
-    });
-    const gasesUso = data.gases?.uso || {};
+  const registros = [];
+  filtrados.forEach((r) => {
+    const gasesUso = r.gases?.uso || {};
     ["Baja", "Media", "Cero"].forEach((tipo) => {
-      const registros = Array.isArray(gasesUso[tipo]) ? gasesUso[tipo] : [];
-
-      registros.forEach((gas) => {
-        agrupado[centroId].gases[tipo].push({
+      const arr = Array.isArray(gasesUso[tipo]) ? gasesUso[tipo] : [];
+      arr.forEach((gas) => {
+        registros.push({
+          tipo,
           psi: gas.psi,
-          fecha: gas.fecha || data.fecha,
+          fecha: gas.fecha || r.fecha,
         });
       });
     });
   });
 
-  Object.entries(agrupado).forEach(([centroId, datos]) => {
-    const consumoGases = {};
+  const labels = [
+    ...new Set(registros.map((r) => dayjs(r.fecha).format("YYYY-MM-DD"))),
+  ].sort();
 
-    Object.entries(datos.gases).forEach(([tipo, registros]) => {
-      const ordenados = registros.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  const series = {
+    Baja: labels.map((f) => {
+      const match = registros.find(
+        (r) => r.tipo === "Baja" && dayjs(r.fecha).format("YYYY-MM-DD") === f
+      );
+      return match ? match.psi : null;
+    }),
+    Media: labels.map((f) => {
+      const match = registros.find(
+        (r) => r.tipo === "Media" && dayjs(r.fecha).format("YYYY-MM-DD") === f
+      );
+      return match ? match.psi : null;
+    }),
+    Cero: labels.map((f) => {
+      const match = registros.find(
+        (r) => r.tipo === "Cero" && dayjs(r.fecha).format("YYYY-MM-DD") === f
+      );
+      return match ? match.psi : null;
+    }),
+  };
 
-      consumoGases[tipo] = calcularConsumoPorCiclos(ordenados);
-    });
-
-    const inicioMes = dayjs().startOf("month");
-    const hoy = dayjs();
-
-    const diasHabiles = contarDiasHabiles(inicioMes, hoy);
-    const reportesEsperados = diasHabiles * 2;
-
-    resumenPorCentro.value[centroId] = {
-      ubicacion: centros.value?.[centroId]?.ubicacion ?? centroId,
-      reportes: datos.reportes,
-      cumplimiento: Math.round((datos.reportes / reportesEsperados) * 100),
-      fallas: datos.fallas,
-      consumoGases,
-    };
-  });
+  chartData.value = {
+    labels,
+    datasets: [
+      {
+        label: "Gas Baja",
+        data: series.Baja,
+        borderColor: "#28a745",
+        backgroundColor: "#28a745",
+        tension: 0.3,
+      },
+      {
+        label: "Gas Media",
+        data: series.Media,
+        borderColor: "#007bff",
+        backgroundColor: "#007bff",
+        tension: 0.3,
+      },
+      {
+        label: "Gas Cero",
+        data: series.Cero,
+        borderColor: "#dc3545",
+        backgroundColor: "#dc3545",
+        tension: 0.3,
+      },
+    ],
+  };
 }
+const cantidadArqueos = ref(1);
 
-const solicitudesPorCentro = ref({});
+const arqueosGenerados = ref([]);
+const iniciarGeneracion = async () => {
 
-async function cargarSolicitudes() {
-  const snapshot = await getDocs(collection(db, "solicitudes"));
-  const agrupado = {};
+  try {
 
-  snapshot.forEach((doc) => {
-    const s = doc.data();
-    const id = s.centroId;
+    // Si NO hay token -> login
+    if (!window.googleTokenReady) {
 
-    if (!agrupado[id]) {
-      agrupado[id] = {
-        Pendiente: 0,
-        Finalizado: 0,
-      };
+      console.log(
+        "Iniciando autenticación Google..."
+      );
+
+      const ok = await window.googleLogin();
+
+      if (!ok) {
+
+        console.error(
+          "No se pudo autenticar Google"
+        );
+
+        return;
+      }
     }
 
-    agrupado[id][s.estatus] = (agrupado[id][s.estatus] || 0) + 1;
-  });
+    console.log(
+      "Token detectado, generando arqueos..."
+    );
 
-  solicitudesPorCentro.value = agrupado;
+    await generarArqueos();
+
+  } catch (err) {
+
+    console.error(
+      "Error iniciando generación:",
+      err
+    );
+  }
+};
+function generarHoraAleatoria(minInicio, maxFin) {
+
+  const randomMin =
+    minInicio + Math.floor(Math.random() * (maxFin - minInicio));
+
+  // Redondear a bloques de 15 min
+  const bloque = Math.floor(randomMin / 15) * 15;
+
+  const horaInicio = bloque;
+
+  const horaFin = bloque + 15;
+
+  const formato = (min) => {
+
+    const h = Math.floor(min / 60);
+
+    const m = min % 60;
+
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  return {
+    inicio: formato(horaInicio),
+    fin: formato(horaFin),
+    bloque,
+  };
 }
 
+async function crearEventoArqueo(arqueo) {
+
+  try {
+
+    const fechaHoy = dayjs().format("YYYY-MM-DD");
+
+    const inicio = arqueo.horario.split(" - ")[0];
+
+    const fin = arqueo.horario.split(" - ")[1];
+
+    const evento = {
+
+      summary: `Arqueo - ${arqueo.centro}`,
+
+      description: arqueo.mensaje,
+
+      start: {
+        dateTime: `${fechaHoy}T${inicio}:00`,
+        timeZone: "America/Mexico_City",
+      },
+
+      end: {
+        dateTime: `${fechaHoy}T${fin}:00`,
+        timeZone: "America/Mexico_City",
+      },
+
+      reminders: {
+        useDefault: false,
+        overrides: [
+          {
+            method: "popup",
+            minutes: 10,
+          },
+        ],
+      },
+    };
+
+    console.log(
+      "TOKEN:",
+      gapi.client.getToken()
+    );
+
+    const res =
+      await gapi.client.calendar.events.insert({
+
+        calendarId: "primary",
+
+        resource: evento,
+      });
+
+    console.log(
+      "Evento creado:",
+      res.result.htmlLink
+    );
+
+  } catch (err) {
+
+    console.error(
+      "Error creando evento:",
+      err
+    );
+  }
+}
+
+const generarArqueos = async () => {
+
+  try {
+
+    if (
+      !Array.isArray(centros.value) ||
+      centros.value.length === 0
+    ) {
+
+      alert("No hay centros registrados");
+
+      return;
+    }
+
+    const minInicio = 9 * 60 + 30;
+
+    const maxFin = 19 * 60;
+
+    const mensajes = [];
+
+    for (const c of centros.value) {
+
+      const horariosCentro = [];
+
+      let intentos = 0;
+
+      while (
+        horariosCentro.length < cantidadArqueos.value &&
+        intentos < 500
+      ) {
+
+        const nuevo = generarHoraAleatoria(
+          minInicio,
+          maxFin
+        );
+
+        intentos++;
+
+        // 2 horas y media = 150 min
+        const validoCentro =
+          horariosCentro.every(
+            (h) =>
+              Math.abs(nuevo.bloque - h.bloque) >= 150
+          );
+
+        // YA NO VALIDAMOS CHOQUE ENTRE CENTROS
+
+        if (validoCentro) {
+
+          horariosCentro.push(nuevo);
+        }
+      }
+
+      if (
+        horariosCentro.length < cantidadArqueos.value
+      ) {
+
+        console.warn(
+          `No se pudieron generar todos los arqueos para ${c.ubicacion}`
+        );
+      }
+
+      horariosCentro.sort(
+        (a, b) => a.bloque - b.bloque
+      );
+
+      for (const [idx, h] of horariosCentro.entries()) {
+
+        const arqueo = {
+
+          centro: c.ubicacion,
+
+          horario: `${h.inicio} - ${h.fin}`,
+
+          mensaje:
+            `Buen día !!\n\n` +
+            `Gerente, favor de realizar Arqueos a cajas disponibles ` +
+            `de (${h.inicio} a ${h.fin}) por favor.\n` +
+            `Centro: ${c.ubicacion}`,
+
+          arqueoNum: idx + 1,
+        };
+
+        mensajes.push(arqueo);
+
+        console.log(
+          "Creando evento:",
+          arqueo.centro,
+          arqueo.horario
+        );
+
+        await crearEventoArqueo(arqueo);
+      }
+    }
+
+    arqueosGenerados.value = mensajes;
+
+    console.log(
+      "Arqueos generados correctamente"
+    );
+
+  } catch (err) {
+
+    console.error(
+      "Error general generando arqueos:",
+      err
+    );
+  }
+};
+// Enviar por WhatsApp
+const enviarWhatsApp = (mensaje) => {
+  const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, "_blank");
+};
+
 onMounted(async () => {
+  await obtenerCentrosActivos();
+  await obtenerSolicitudesActivas();
+  await obtenerReportesHoy();
+  await cargarInfraestructuraFueraServicio();
+
   await cargarCentros();
-  await cargarReportes();
-  await cargarSolicitudes();
+  await cargarReportesCentro(); // ojo aquí
+  await cargarEventos();
 });
 </script>
+
 <style scoped>
 .dashboard-header {
   display: flex;
@@ -469,13 +697,13 @@ onMounted(async () => {
   text-align: center;
   text-decoration: none;
   color: #212529;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
 }
 
 .quick-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .quick-card i {
@@ -532,5 +760,115 @@ onMounted(async () => {
 .border-secondary-subtle {
   border-color: #e9ecef !important;
 }
+/* ================= UPCOMING EVENTS ================= */
+.upcoming-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.2rem;
+  margin: 1.5rem 3%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
 
+.upcoming-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #212529;
+}
+
+.upcoming-header i {
+  font-size: 1.2rem;
+  color: #0d6efd;
+}
+
+/* LISTA */
+.upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ITEM */
+.upcoming-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.upcoming-item:hover {
+  background: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+/* FECHA */
+.upcoming-item .date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0d6efd;
+  min-width: 70px;
+}
+
+/* INFO */
+.upcoming-item .info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.upcoming-item .info strong {
+  font-size: 13px;
+}
+
+.upcoming-item .assigned {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+/* VACÍO */
+.empty-upcoming {
+  text-align: center;
+  font-size: 13px;
+  color: #6c757d;
+  padding: 15px;
+}
+.arqueos-scroll {
+  max-height: 300px; /* 👈 scroll interno */
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.arqueo-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.arqueo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.arqueo-body {
+  margin-top: 6px;
+}
+
+.mensaje {
+  white-space: pre-line;
+  font-size: 0.9rem;
+  margin: 6px 0;
+}
+
+.arqueo-actions {
+  text-align: right;
+}
 </style>

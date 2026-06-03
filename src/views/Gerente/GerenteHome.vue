@@ -1,7 +1,7 @@
 <template>
   <div class="container py-3">
     <h5 class="mb-4 text-dark-emphasis text-center fw-semibold">
-      Bienvenido, estos son tus recordatorios importantes
+      Bienvenido, estos son tus recordatorios importantes.
     </h5>
 
     <div class="row g-3">

@@ -91,6 +91,26 @@
                 placeholder="Escribe observaciones..."
               ></textarea>
             </div>
+            <div v-if="infraActual.estatus === 'Fuera de servicio'" class="mb-3">
+              <label class="form-label fw-semibold"> Proveedor </label>
+
+              <select
+                v-model="infraActual.proveedor"
+                class="form-select form-select-lg shadow-sm"
+              >
+                <option disabled value="">
+                  {{
+                    cargandoProveedores
+                      ? "Cargando proveedores..."
+                      : "Selecciona proveedor"
+                  }}
+                </option>
+
+                <option v-for="(prov, index) in proveedores" :key="index" :value="prov">
+                  {{ prov }}
+                </option>
+              </select>
+            </div>
           </div>
 
           <div class="modal-footer">
@@ -98,7 +118,11 @@
               Cancelar
             </button>
             <button type="button" class="btn btn-success" @click="guardarCambios">
-              Guardar
+              {{
+                infraActual.estatus === "Fuera de servicio"
+                  ? "Guardar y generar solicitud"
+                  : "Guardar"
+              }}
             </button>
           </div>
         </div>
@@ -116,6 +140,7 @@ import {
   getDocs,
   getFirestore,
   doc,
+  addDoc,
   updateDoc,
 } from "firebase/firestore";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -123,7 +148,31 @@ import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 const db = getFirestore();
 const infraestructura = ref([]);
 const loading = ref(true);
-const infraActual = ref({ id: "", elemento: "", estatus: "", observaciones: "", areas:"", areasConFalla:"" });
+const infraActual = ref({
+  id: "",
+  elemento: "",
+  estatus: "",
+  observaciones: "",
+  areas: "",
+  areasConFalla: "",
+  proveedor: "",
+});
+const proveedores = ref([]);
+const cargandoProveedores = ref(false);
+
+async function cargarProveedores() {
+  try {
+    cargandoProveedores.value = true;
+
+    const snap = await getDocs(collection(db, "proveedores"));
+
+    proveedores.value = snap.docs.map((doc) => doc.data().nombre);
+  } catch (error) {
+    console.error("Error cargando proveedores:", error);
+  } finally {
+    cargandoProveedores.value = false;
+  }
+}
 
 onMounted(async () => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -159,6 +208,7 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+  await cargarProveedores();
 });
 
 function editar(item) {
@@ -177,22 +227,58 @@ function editar(item) {
 
 async function guardarCambios() {
   try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const centroId = user?.centroId || user?.idCentro || null;
+
+    if (!centroId) return;
+
+    // Validación extra
+    if (
+      infraActual.value.estatus === "Fuera de servicio" &&
+      !infraActual.value.proveedor
+    ) {
+      alert("Debes capturar el proveedor para generar la solicitud.");
+      return;
+    }
+
+    // 1️⃣ Actualizar infraestructura
     const docRef = doc(db, "infraestructura", infraActual.value.id);
+
     await updateDoc(docRef, {
       estatus: infraActual.value.estatus,
       observaciones: infraActual.value.observaciones,
       areasConFalla: infraActual.value.areasConFalla,
     });
 
-    console.log("[✅ Infraestructura actualizada]", infraActual.value);
+    const index = infraestructura.value.findIndex(
+      (i) => i.id === infraActual.value.id
+    );
+    if (index !== -1)
+      infraestructura.value[index] = { ...infraActual.value };
 
-    // Actualizar localmente
-    const index = infraestructura.value.findIndex((i) => i.id === infraActual.value.id);
-    if (index !== -1) infraestructura.value[index] = { ...infraActual.value };
+    if (infraActual.value.estatus === "Fuera de servicio") {
+      const hoy = new Date().toISOString().split("T")[0];
 
-    bootstrap.Modal.getInstance(document.getElementById("modalEditarInfra")).hide();
+      await addDoc(collection(db, "solicitudes"), {
+        centroId: centroId,
+        tipo: "Infraestructura",
+        elemento: infraActual.value.elemento,
+        proveedor: infraActual.value.proveedor,
+        fechaSolicitud: hoy,
+        fechaPago: "",
+        fechaEntrega: "",
+        observaciones: infraActual.value.observaciones || "",
+        estatus: "Pendiente",
+        leida: false,
+      });
+    }
+
+    bootstrap.Modal.getInstance(
+      document.getElementById("modalEditarInfra")
+    ).hide();
+
   } catch (err) {
-    console.error("[❌ Error al actualizar infraestructura]", err);
+    console.error("Error:", err);
   }
 }
 </script>

@@ -102,6 +102,13 @@
       >
         Infraestructura
       </router-link>
+      <router-link
+        to="/Administrador/AgendaAdmin"
+        class="nav-link text-white py-2 px-3 rounded mb-1"
+        active-class="bg-secondary"
+      >
+        Agenda
+      </router-link>
     </nav>
     <br />
     <!-- Logout -->
@@ -133,7 +140,6 @@ onMounted(() => {
 
   user.value = storedUser;
 
-  // ❌ Ya NO activamos listeners aquí
   console.log("Sidebar cargado para", storedUser.rol);
 });
 

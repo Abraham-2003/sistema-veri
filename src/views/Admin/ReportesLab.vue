@@ -122,7 +122,7 @@ const buildRiesgo = (centro, dias, fecha, texto, clase, badge) => ({
 /* 🔹 Navegación */
 const verDetalleCentro = (centro) => {
   router.push({
-    name: "ReportesLaboratorioCentro",
+    name: "ReportesLaboratorioCentroAdmin",
     params: { centroId: centro.id },
   });
 };

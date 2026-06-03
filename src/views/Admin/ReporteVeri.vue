@@ -121,100 +121,140 @@
       <!-- Gases -->
 
       <div class="accordion-item">
-        <h2 class="accordion-header" id="headingGases">
-          <button
-            class="accordion-button collapsed"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseGases"
-          >
-            Gases
-          </button>
-        </h2>
-        <div
-          id="collapseGases"
-          class="accordion-collapse collapse"
-          data-bs-parent="#reporteCollapse"
-        >
-          <div class="accordion-body">
-            <h6>En uso</h6>
-            <table class="table table-bordered table-sm">
-              <thead class="table-light">
-                <tr>
-                  <th>Tipo</th>
-                  <th>Serie</th>
-                  <th>PSI</th>
-                  <th>Estatus</th>
-                  <th>#Reporte</th>
-                  <th>Observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(gas, i) in gasesUsoOrdenados" :key="'uso-' + gas.id ?? i">
-                  <td>{{ gas.tipo }}</td>
-                  <td>{{ gas.serie }}</td>
-                  <td>{{ gas.psi }}</td>
-                  <td>{{ gas.estatus }}</td>
-                  <td>{{ gas.reporte }}</td>
-                  <td>{{ gas.observaciones }}</td>
-                </tr>
-              </tbody>
-            </table>
+  <h2 class="accordion-header" id="headingGases">
+    <button
+      class="accordion-button collapsed"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#collapseGases"
+    >
+      Gases
+    </button>
+  </h2>
 
-            <h6 class="mt-4">En stock</h6>
-            <table class="table table-bordered table-sm">
-              <thead class="table-light">
-                <tr>
-                  <th>Tipo</th>
-                  <th>Serie</th>
-                  <th>PSI</th>
-                  <th>Estatus</th>
-                  <th>#Reporte</th>
-                  <th>Observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(gas, i) in gasesStockOrdenados" :key="'stock-' + gas.id ?? i">
-                  <td>{{ gas.tipo }}</td>
-                  <td>{{ gas.serie }}</td>
-                  <td>{{ gas.psi }}</td>
-                  <td>{{ gas.estatus }}</td>
-                  <td>{{ gas.reporte }}</td>
-                  <td>{{ gas.observaciones }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <!-- Imágenes del reporte -->
-            <!-- Galería de imágenes -->
-            <div
-              v-if="
-                Array.isArray(reporteSeleccionado?.imagenes) &&
-                reporteSeleccionado.imagenes.length
-              "
-              class="mt-4"
+  <div
+    id="collapseGases"
+    class="accordion-collapse collapse"
+    data-bs-parent="#reporteCollapse"
+  >
+    <div class="accordion-body">
+
+      <!-- =========================
+           GASES EN USO
+      ========================== -->
+      <h5 class="mb-3 fw-bold">Gases en uso</h5>
+
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light text-center">
+            <tr>
+              <th>Tipo</th>
+              <th>Serie</th>
+              <th>PSI</th>
+              <th>Estatus</th>
+              <th>#Reporte</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(gas, i) in gasesUsoOrdenados"
+              :key="'uso-' + (gas.id ?? i)"
+              class="text-center"
             >
-              <h6>Imágenes de gases</h6>
-
-              <div v-viewer class="row g-3">
-                <div
-                  v-for="(img, index) in reporteSeleccionado.imagenes"
-                  :key="index"
-                  class="col-6 col-md-4 col-lg-3"
-                >
-                  <div class="border rounded p-2 h-100 text-center hover-shadow">
-                    <img
-                      :src="img"
-                      class="img-fluid rounded imagen-reporte"
-                      alt="Imagen del reporte"
-                      style="max-height: 200px; object-fit: contain; cursor: zoom-in"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              <td class="fw-semibold">{{ gas.tipo }}</td>
+              <td>{{ gas.serie || '-' }}</td>
+              <td>{{ gas.psi || '-' }}</td>
+              <td>
+                {{ gas.estatus || '-' }}
+              </td>
+              <td>{{ gas.reporte || '-' }}</td>
+              <td>{{ gas.observaciones || 'Sin observaciones' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+
+      <!-- =========================
+           IMÁGENES POR TIPO
+      ========================== -->
+      <div
+  v-if="imagenesGases.length"
+  class="mt-5"
+>
+  <h5 class="fw-bold mb-3">Evidencia fotográfica</h5>
+
+  <div v-viewer class="row g-4">
+
+    <div
+      v-for="(img, index) in imagenesGases"
+      :key="index"
+      class="col-md-4"
+    >
+      <div class="card shadow-sm h-100 border-0">
+
+        <div
+          class="card-header text-center fw-semibold"
+          :class="{
+            'bg-primary text-white': img.tipo === 'media',
+            'bg-warning text-dark': img.tipo === 'baja',
+            'bg-danger text-white': img.tipo === 'cero'
+          }"
+        >
+          Gas {{ img.tipo.charAt(0).toUpperCase() + img.tipo.slice(1) }}
+        </div>
+
+        <div class="card-body text-center">
+          <img
+            :src="img.url"
+            class="img-fluid rounded"
+            style="max-height: 250px; object-fit: contain; cursor: zoom-in"
+          />
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+      <!-- =========================
+           GASES EN STOCK
+      ========================== -->
+      <h5 class="mt-5 mb-3 fw-bold">Gases en stock</h5>
+
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light text-center">
+            <tr>
+              <th>Tipo</th>
+              <th>Serie</th>
+              <th>PSI</th>
+              <th>Estatus</th>
+              <th>#Reporte</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(gas, i) in gasesStockOrdenados"
+              :key="'stock-' + (gas.id ?? i)"
+              class="text-center"
+            >
+              <td class="fw-semibold">{{ gas.tipo }}</td>
+              <td>{{ gas.serie || '-' }}</td>
+              <td>{{ gas.psi || '-' }}</td>
+              <td>{{ gas.estatus || '-' }}</td>
+              <td>{{ gas.reporte || '-' }}</td>
+              <td>{{ gas.observaciones || 'Sin observaciones' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
 
       <!-- Compresor -->
       <div class="accordion-item">
@@ -444,7 +484,20 @@
           data-bs-parent="#reporteCollapse"
         >
           <div class="accordion-body">
-            {{ reporteSeleccionado.observaciones }}
+            <div class="mb-2">
+              <textarea
+                v-model="reporteSeleccionado.observaciones"
+                class="form-control"
+                rows="4"
+                placeholder="Agregar observaciones generales..."
+              ></textarea>
+            </div>
+
+            <div class="text-end">
+              <button class="btn btn-sm btn-primary" @click="guardarObservaciones">
+                Guardar observaciones
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -456,7 +509,7 @@
 import { ref, onMounted, computed, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "../../servivces/auth.js";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 import dayjs from "dayjs";
 import VueCal from "vue-cal";
 import "vue-cal/dist/vuecal.css";
@@ -471,7 +524,17 @@ const imagenSeleccionada = ref(null);
 let modal = null;
 
 const fechasConReporte = ref([]);
+const imagenesGases = computed(() => {
+  const imgs = reporteSeleccionado.value?.imagenes
+  if (!imgs) return []
 
+  return Object.entries(imgs)
+    .filter(([_, url]) => url)
+    .map(([tipo, url]) => ({
+      tipo,
+      url
+    }))
+})
 const cargarFechasConReporte = async () => {
   if (!centroId.value) return;
   const snapshot = await getDocs(
@@ -481,6 +544,24 @@ const cargarFechasConReporte = async () => {
     id: doc.id,
     ...doc.data(),
   }));
+};
+
+const guardarObservaciones = async () => {
+  if (!reporteSeleccionado.value?.id) {
+    alert("No hay reporte seleccionado");
+    return;
+  }
+
+  try {
+    await updateDoc(doc(db, "reportes", reporteSeleccionado.value.id), {
+      observaciones: reporteSeleccionado.value.observaciones || "",
+    });
+
+    alert("Observaciones actualizadas correctamente");
+  } catch (error) {
+    console.error("[❌ Error al actualizar observaciones]", error);
+    alert("No se pudieron guardar las observaciones");
+  }
 };
 
 const lineasCalibradas = computed(() => {

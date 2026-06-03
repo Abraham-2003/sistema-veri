@@ -1,7 +1,17 @@
 <template>
   <div class="container py-4">
     <h2 class="titulo">Reportes por Centro</h2>
+    <div class="mb-3">
+      <button
+        class="btn btn-primary"
+        :disabled="loadingGeneral"
+        @click="generarReporteGeneral"
+      >
+        <span v-if="loadingGeneral" class="spinner-border spinner-border-sm me-2"></span>
 
+        {{ loadingGeneral ? "Generando reporte..." : "Generar reporte general" }}
+      </button>
+    </div>
     <div class="grid-centros">
       <div
         v-for="centro in centros"
@@ -28,6 +38,12 @@
         <div v-if="tieneReporteHoy(centro.id)" class="alerta-pendiente">
           Reporte pendiente
         </div>
+        <button
+          class="btn btn-outline-danger btn-sm mt-2 ms-2"
+          @click.stop="descargarReportePDF(centro)"
+        >
+          Generar PDF
+        </button>
         <button
           class="btn btn-outline-success btn-sm mt-2"
           @click.stop="abrirModalExcel(centro)"
@@ -90,17 +106,21 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { db } from "../../servivces/auth.js";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import {
+  generarReporteIncidencias,
+  descargarPDFIncidencias,
+} from "../../servivces/reporteIncidencias.js";
+import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import dayjs from "dayjs";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx-js-style";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
-
 
 const fechaInicio = ref("");
 const fechaFin = ref("");
 const reportesHoy = ref([]);
 const loading = ref(false);
 const centroId = ref("");
+const loadingGeneral = ref(false);
 
 const cargarReportesHoy = async () => {
   const hoy = dayjs().format("YYYY-MM-DD");
@@ -167,6 +187,197 @@ const obtenerReportes = async () => {
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
+const generarReporteGeneral = async () => {
+  try {
+    loadingGeneral.value = true;
+
+    const filas = [];
+
+    for (const centro of centros.value) {
+      const q = query(
+        collection(db, "reportes"),
+        where("centroId", "==", centro.id),
+        orderBy("fecha", "desc"),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        filas.push({
+          Centro: centro.ubicacion,
+          Fecha: "Sin reporte",
+        });
+
+        continue;
+      }
+
+      const reporte = {
+        id: snapshot.docs[0].id,
+        ...snapshot.docs[0].data(),
+      };
+
+      const uso = reporte.gases?.uso || {};
+      const stock = reporte.gases?.stock || {};
+
+      const bajaUso = uso.Baja?.[0] || {};
+      const mediaUso = uso.Media?.[0] || {};
+      const ceroUso = uso.Cero?.[0] || {};
+
+      const bajaStock = stock.Baja?.[0] || {};
+      const mediaStock = stock.Media?.[0] || {};
+      const ceroStock = stock.Cero?.[0] || {};
+
+      filas.push({
+        Centro: centro.ubicacion,
+
+        Fecha: dayjs(reporte.fecha).format("YYYY-MM-DD HH:mm"),
+
+        "Baja Uso PSI": bajaUso.psi ?? "",
+        "Baja Uso Serie": bajaUso.serie ?? "",
+
+        "Media Uso PSI": mediaUso.psi ?? "",
+        "Media Uso Serie": mediaUso.serie ?? "",
+
+        "Cero Uso PSI": ceroUso.psi ?? "",
+        "Cero Uso Serie": ceroUso.serie ?? "",
+
+        "Baja Stock PSI": bajaStock.psi ?? "",
+        "Baja Stock Serie": bajaStock.serie ?? "",
+
+        "Media Stock PSI": mediaStock.psi ?? "",
+        "Media Stock Serie": mediaStock.serie ?? "",
+
+        "Cero Stock PSI": ceroStock.psi ?? "",
+        "Cero Stock Serie": ceroStock.serie ?? "",
+      });
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    const ws = XLSX.utils.json_to_sheet(filas);
+    const psiColumns = ["C", "E", "G", "I", "K", "M"];
+
+    for (let row = 2; row <= filas.length + 1; row++) {
+      psiColumns.forEach((col) => {
+        const cell = `${col}${row}`;
+
+        if (!ws[cell]) return;
+
+        const valor = Number(ws[cell].v);
+
+        let color = null;
+
+        if (valor >= 801) {
+          color = "C6EFCE";
+        } else if (valor >= 501) {
+          color = "FFEB9C";
+        } else {
+          color = "FFC7CE";
+        }
+
+        ws[cell].s = {
+          ...(ws[cell].s || {}),
+          fill: {
+            fgColor: { rgb: color },
+          },
+          alignment: {
+            horizontal: "center",
+          },
+        };
+      });
+    }
+    const aplicarFormatoHoja = (ws) => {
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+
+      // Encabezados
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const cell = XLSX.utils.encode_cell({
+          r: 0,
+          c,
+        });
+
+        if (!ws[cell]) continue;
+
+        ws[cell].s = {
+          font: {
+            bold: true,
+            color: { rgb: "FFFFFF" },
+          },
+          fill: {
+            fgColor: { rgb: "1F4E78" },
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+          },
+          border: {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          },
+        };
+      }
+
+      // Filas alternadas
+      for (let r = 1; r <= range.e.r; r++) {
+        const color = r % 2 === 0 ? "F2F2F2" : "FFFFFF";
+
+        for (let c = 0; c <= range.e.c; c++) {
+          const cell = XLSX.utils.encode_cell({
+            r,
+            c,
+          });
+
+          if (!ws[cell]) continue;
+
+          ws[cell].s = ws[cell].s || {};
+
+          // Solo si no tiene color previo
+          if (!ws[cell].s.fill) {
+            ws[cell].s.fill = {
+              fgColor: { rgb: color },
+            };
+          }
+        }
+      }
+
+      // Ancho automático
+      ws["!cols"] = [
+        { wch: 25 }, // centro
+        { wch: 20 }, // fecha
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 20 },
+      ];
+    };
+    aplicarFormatoHoja(ws);
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte General");
+
+    const estado = import.meta.env.VITE_ESTADO;
+
+    XLSX.writeFile(
+      wb,
+      `Reporte_General_Gases_${estado}_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`
+    );
+  } catch (error) {
+    console.error(error);
+
+    alert("Error generando reporte general");
+  } finally {
+    loadingGeneral.value = false;
+  }
+};
 const descargarExcel = async () => {
   if (!fechaInicio.value || !fechaFin.value || !centroId.value) {
     alert("Selecciona centro y rango de fechas");
@@ -199,6 +410,26 @@ const descargarExcel = async () => {
   } catch (error) {
     console.error("Error generando Excel", error);
     alert("Error al generar el reporte");
+  } finally {
+    loading.value = false;
+  }
+};
+const descargarReportePDF = async (centro) => {
+  try {
+    loading.value = true;
+
+    const data = await generarReporteIncidencias({
+      ...centro,
+      encargadoNombre: nombreEncargado(centro.encargado),
+    });
+
+    console.log("REPORTE GENERADO:", data);
+
+    await descargarPDFIncidencias(data);
+  } catch (error) {
+    console.error(error);
+
+    alert("Error generando reporte PDF");
   } finally {
     loading.value = false;
   }

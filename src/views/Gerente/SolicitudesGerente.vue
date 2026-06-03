@@ -79,11 +79,11 @@
                   class="modal-content shadow-lg border-0 rounded-4 overflow-hidden animate-modal"
                 >
                   <!-- Encabezado -->
-                  <div class="modal-header  ">
+                  <div class="modal-header">
                     <h5 class="modal-title">Selecciona un servicio o laboratorio</h5>
                     <button
                       type="button "
-                      class="btn-close "
+                      class="btn-close"
                       @click="mostrarSelector = false"
                     ></button>
                   </div>
@@ -212,7 +212,15 @@
               <strong>Fecha de Solicitud:</strong>
               {{ solicitudSeleccionada.fechaSolicitud }}
             </p>
-            <p><strong>Fecha de Pago:</strong> {{ solicitudSeleccionada.fechaPago }}</p>
+            <div class="mt-2">
+              <label class="form-label">Fecha de Pago</label>
+              <input
+                type="date"
+                v-model="solicitudSeleccionada.fechaPago"
+                class="form-control"
+              />
+            </div>
+
             <p>
               <strong>Observaciones:</strong> {{ solicitudSeleccionada.observaciones }}
             </p>
@@ -224,6 +232,11 @@
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+
+            <button class="btn btn-primary" @click="guardarCambiosSolicitud">
+              Guardar
+            </button>
+
             <button
               v-if="solicitudSeleccionada.estatus === 'Pendiente'"
               class="btn btn-success"
@@ -284,6 +297,24 @@ const solicitudesFiltradas = computed(() =>
     (s) => s.estatus === "Pendiente" && s.centroId === user.value.centroId
   )
 );
+const guardarCambiosSolicitud = async () => {
+  try {
+    await updateDoc(
+      doc(db, "solicitudes", solicitudSeleccionada.value.id),
+      {
+        fechaPago: solicitudSeleccionada.value.fechaPago || "",
+      }
+    );
+
+    alert("Cambios guardados correctamente");
+
+    await cargarSolicitudes();
+
+  } catch (err) {
+    console.error("[❌ Error al guardar cambios]", err);
+    alert("No se pudieron guardar los cambios");
+  }
+};
 
 const cargarSolicitudes = async () => {
   const snapshot = await getDocs(collection(db, "solicitudes"));
@@ -299,7 +330,7 @@ const solicitud = ref({
   observaciones: "",
   centroId: "",
   estatus: "Pendiente",
-  leida: false
+  leida: false,
 });
 
 const abrirModal = (solicitud) => {
@@ -378,7 +409,7 @@ const guardarSolicitud = async () => {
       observaciones: "",
       centroId: "",
       estatus: "Pendiente",
-      leida: false
+      leida: false,
     };
   } catch (err) {
     console.error("[❌ Error al guardar solicitud]", err);

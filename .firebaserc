@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "sistema-veri-a4789"
-  }
+    "default": "sistema-veri-a4789",
+    "ReportesHidalgo": "reportes-veris-hidalgo"
+  },
+  "targets": {},
+  "etags": {}
 }

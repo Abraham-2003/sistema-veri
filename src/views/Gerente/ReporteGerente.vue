@@ -38,7 +38,16 @@
 
     <!-- Sección Imágenes -->
     <div v-else-if="seccionActual === 'imagenes'">
-      <Imagenes v-model="reporte.imagenes" @siguiente="avanzarA('compresor')" />
+      <Imagenes
+        @update:modelValue="
+          (val) => {
+            reporte.imagenes = val.imagenes;
+            reporte.imagenesHashes = val.imagenesHashes;
+          }
+        "
+        @siguiente="avanzarA('compresor')"
+      />
+
       <div class="mb-3 text-center">
         <button
           class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm"
@@ -149,6 +158,7 @@ const router = useRouter();
 const db = getFirestore();
 const storage = getStorage();
 const enviando = ref(false);
+const centroNombre = ref("");
 
 // Estado centralizado del reporte
 const reporte = reactive({
@@ -161,7 +171,8 @@ const reporte = reactive({
   compresor: {},
   lineas: {},
   tacometros: {},
-  imagenes: [],
+  imagenes: { media: null, baja: null, cero: null },
+  imagenesHashes: { media: null, baja: null, cero: null },
 });
 
 // Flujo de secciones
@@ -202,7 +213,7 @@ function validarReporte() {
 
 // Guardar reporte en Firestore
 async function guardarReporte() {
-  if (enviando.value) return; // blindaje extra
+  if (enviando.value) return;
 
   const error = validarReporte();
   if (error) {
@@ -210,34 +221,64 @@ async function guardarReporte() {
     return;
   }
 
+  // ✅ Validar que las tres imágenes estén presentes
+  if (!reporte.imagenes.media || !reporte.imagenes.baja || !reporte.imagenes.cero) {
+    Swal.fire({
+      icon: "warning",
+      title: "Faltan imágenes",
+      text: "Debes subir las fotos de Media, Baja y Cero.",
+    });
+    return;
+  }
+
   enviando.value = true;
 
   try {
-    const urls = [];
+    const urls = {};
 
-    for (const file of reporte.imagenes) {
+    // ✅ Subir cada imagen y guardar URL
+    for (const tipo of ["media", "baja", "cero"]) {
+      const file = reporte.imagenes[tipo]; // aquí son File objects
       const refImg = storageRef(
         storage,
-        `reportes/${reporte.centroId}/${Date.now()}-${file.name}`
+        `reportes/${reporte.centroId}/${tipo}-${Date.now()}-${file.name}`
       );
 
       await uploadBytes(refImg, file);
       const url = await getDownloadURL(refImg);
-      urls.push(url);
+      urls[tipo] = url;
     }
 
+    // ✅ Guardar en Firestore: URLs + hashes como texto plano
     const reporteFinal = {
-      ...reporte,
-      imagenes: urls,
+      centroId: reporte.centroId,
+      fecha: reporte.fecha,
+      observaciones: reporte.observaciones,
+      observacionesCalibraciones: reporte.observacionesCalibraciones,
+      calibraciones: reporte.calibraciones,
+      gases: reporte.gases,
+      compresor: reporte.compresor,
+      lineas: reporte.lineas,
+      tacometros: reporte.tacometros,
+      imagenes: urls, // URLs correctas
+      imagenesHashes: { ...reporte.imagenesHashes }, // hashes como strings
     };
 
-    const docRef = await addDoc(collection(db, "reportes"), reporteFinal);
-    console.log("[📤 Reporte enviado]", docRef.id);
+    await addDoc(collection(db, "reportes"), reporteFinal);
+
+    const fechaHora = new Date().toLocaleString("es-MX", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
 
     await Swal.fire({
       icon: "success",
       title: "Reporte enviado",
-      text: "El reporte fue guardado correctamente.",
+      text: `El reporte fue guardado correctamente.\nCentro: ${centroNombre.value}\nFecha y hora: ${fechaHora}`,
     });
 
     router.push("/Gerente/");
@@ -254,15 +295,15 @@ async function guardarReporte() {
 }
 
 // Subida de imágenes a Firebase Storage
-async function subirImagen(file) {
+async function subirImagen(file, tipo) {
   try {
     const refImg = storageRef(
       storage,
-      `reportes/${reporte.centroId}/${Date.now()}-${file.name}`
+      `reportes/${reporte.centroId}/${tipo}-${Date.now()}-${file.name}`
     );
     await uploadBytes(refImg, file);
     const url = await getDownloadURL(refImg);
-    reporte.imagenes.push(url);
+    reporte.imagenes[tipo] = url; // ✅ asignar por tipo
     console.log("[✅ Imagen subida]", url);
   } catch (error) {
     console.error("[Error al subir imagen]", error);
@@ -288,6 +329,7 @@ onMounted(async () => {
         (_, i) => i + 1
       );
       lineaDual.value = centroData.lineaDual || null;
+      centroNombre.value = centroData.ubicacion || "";
     } else {
       console.warn("[Centro no encontrado]", centroId);
     }

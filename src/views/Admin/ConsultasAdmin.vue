@@ -69,31 +69,70 @@
         class="border rounded p-3 shadow-sm"
       >
         <!-- Fecha -->
-        <div class="fw-semibold text-primary mb-3">{{ fila.fecha }}</div>
+        <div class="fw-semibold text-primary mb-3">
+          {{ fila.fecha }}
+        </div>
 
-        <!-- Gases -->
-        <div class="d-flex flex-wrap gap-3">
-          <div
-            v-for="gas in fila.gases
-              .slice()
-              .sort((a, b) => ordenVisual.indexOf(a.tipo) - ordenVisual.indexOf(b.tipo))"
-            :key="gas.tipo"
-            class="gas-card"
-            :class="{ descontinuado: gas.descontinuado }"
-          >
-            <div class="gas-tipo">{{ gas.tipo }}</div>
+        <div class="row">
+          <!-- Columna izquierda: gases -->
+          <div class="col-md-8">
+            <div class="d-flex flex-wrap gap-3">
+              <div
+                v-for="gas in fila.gases
+                  .slice()
+                  .sort(
+                    (a, b) => ordenVisual.indexOf(a.tipo) - ordenVisual.indexOf(b.tipo)
+                  )"
+                :key="gas.tipo"
+                class="gas-card"
+                :class="{ descontinuado: gas.descontinuado }"
+              >
+                <div class="gas-tipo">{{ gas.tipo }}</div>
 
-            <div class="gas-info">
-              <span>Inicial</span>
-              <strong>{{ gas.psiInicial }}</strong>
+                <div class="gas-info">
+                  <span>Inicial</span>
+                  <strong>{{ gas.psiInicial }}</strong>
+                </div>
+
+                <div class="gas-info">
+                  <span>Final</span>
+                  <strong>{{ gas.psiFinal }}</strong>
+                </div>
+
+                <div class="gas-consumo">Consumo: {{ gas.consumo }}</div>
+              </div>
             </div>
+          </div>
 
-            <div class="gas-info">
-              <span>Final</span>
-              <strong>{{ gas.psiFinal }}</strong>
+          <!-- Columna derecha: observaciones -->
+          <div class="col-md-4 border-start ps-3">
+            <div class="fw-semibold mb-2 text-secondary">Observaciones del día</div>
+
+            <!-- 👇 CORRECCIÓN AQUÍ -->
+            <template v-for="(rep, i) in fila.reportes || []" :key="i">
+              <div
+                v-if="rep && rep.observaciones"
+                class="mb-3 p-2 rounded bg-light border"
+              >
+                <div
+                  class="small fw-semibold"
+                  :class="rep.tipo === 'Mañana' ? 'text-warning' : 'text-primary'"
+                >
+                  {{ rep.tipo }}
+                </div>
+
+                <div class="small text-muted">
+                  {{ rep.observaciones }}
+                </div>
+              </div>
+            </template>
+
+            <div
+              v-if="!fila.reportes || fila.reportes.length === 0"
+              class="text-muted small fst-italic"
+            >
+              Sin observaciones
             </div>
-
-            <div class="gas-consumo">Consumo: {{ gas.consumo }}</div>
           </div>
         </div>
       </div>
@@ -109,7 +148,12 @@
             :key="linea.numero"
             class="rounded shadow-sm px-4 py-3 text-center"
             :style="{
-              backgroundColor: linea.estado === 'Operativa' ? '#e6f4ea' : '#f0f0f0',
+              backgroundColor:
+                linea.estado === 'Operativa'
+                  ? '#e6f4ea'
+                  : linea.estado === 'Fuera de servicio'
+                  ? '#f8d7da' // rojo claro para fuera de servicio
+                  : '#f0f0f0',
               border: '1px solid #ddd',
               minWidth: '140px',
               flex: '0 0 auto',
@@ -119,14 +163,18 @@
             <div
               :class="{
                 'text-success': linea.estado === 'Operativa',
-                'text-secondary': linea.estado !== 'Operativa',
+                'text-danger': linea.estado === 'Fuera de servicio',
+                'text-secondary':
+                  linea.estado !== 'Operativa' && linea.estado !== 'Fuera de servicio',
               }"
               class="small"
             >
               <i
                 :class="{
                   'bi bi-check-circle-fill': linea.estado === 'Operativa',
-                  'bi bi-slash-circle': linea.estado !== 'Operativa',
+                  'bi bi-x-circle-fill': linea.estado === 'Fuera de servicio',
+                  'bi bi-slash-circle':
+                    linea.estado !== 'Operativa' && linea.estado !== 'Fuera de servicio',
                 }"
                 class="me-1"
               ></i>
@@ -212,6 +260,7 @@ async function consultarReportes() {
     return {
       id: doc.id,
       fecha: data.fecha,
+      observaciones: data.observaciones || "",
       gasesUso,
       lineas,
     };
@@ -270,6 +319,18 @@ function procesarGases() {
     const reportesDelDia = agrupadosPorDia[dia].sort((a, b) =>
       dayjs(a.fecha).isBefore(dayjs(b.fecha)) ? -1 : 1
     );
+    // Construir observaciones por turno (según hora)
+    const observacionesDelDia = reportesDelDia
+      .map((r) => {
+        const hora = dayjs(r.fecha).hour();
+        const tipoTurno = hora < 15 ? "Mañana" : "Noche";
+
+        return {
+          tipo: tipoTurno,
+          observaciones: r.observaciones || "",
+        };
+      })
+      .filter((r) => r.observaciones && r.observaciones.trim() !== "");
 
     const primero = reportesDelDia[0];
     const ultimo = reportesDelDia[reportesDelDia.length - 1];
@@ -311,6 +372,7 @@ function procesarGases() {
     resultado.push({
       fecha: dia,
       gases: gasesDelDia,
+      reportes: observacionesDelDia,
     });
   });
 

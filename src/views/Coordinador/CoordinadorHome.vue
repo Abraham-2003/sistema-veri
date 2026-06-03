@@ -3,7 +3,7 @@
     <main class="admin-content">
       <div class="dashboard-header">
         <div>
-          <h2>Bienvenido, {{ user.nombre || "Administrador" }}</h2>
+          <h2>Bienvenido, {{ user.nombre || "Coordinador" }}</h2>
           <p class="text-muted">Resumen general del sistema y desempeño operativo</p>
         </div>
       </div>

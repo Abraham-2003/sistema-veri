@@ -164,6 +164,22 @@ watch(
     const snap = await getDocs(q);
 
     ultimoReporte.value = snap.empty ? null : snap.docs[0].data();
+    if (ultimoReporte.value?.gases) {
+      const anteriorUso = ultimoReporte.value.gases.uso || {};
+      const anteriorStock = ultimoReporte.value.gases.stock || {};
+
+      tabs.forEach((tipo) => {
+        // Autocompletar EN USO
+        if (anteriorUso[tipo]?.[0]) {
+          gasesUso.value[tipo][0].serie = anteriorUso[tipo][0].serie || "";
+        }
+
+        // Autocompletar EN STOCK
+        if (anteriorStock[tipo]?.[0]) {
+          gasesStock.value[tipo][0].serie = anteriorStock[tipo][0].serie || "";
+        }
+      });
+    }
   },
   { immediate: true }
 );

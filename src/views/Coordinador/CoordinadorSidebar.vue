@@ -99,6 +99,13 @@
       >
         Infraestructura
       </router-link>
+      <router-link
+        to="/Coordinador/Agenda"
+        class="nav-link text-white py-2 px-3 rounded mb-1"
+        active-class="bg-secondary"
+      >
+        Agenda
+      </router-link>
     </nav>
 
     <!-- Logout -->

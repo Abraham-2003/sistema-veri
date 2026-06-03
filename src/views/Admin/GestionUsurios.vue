@@ -151,6 +151,7 @@
                 <option value="Administrador">Administrador</option>
                 <option value="Coordinador">Coordinador</option>
                 <option value="Gerente">Gerente</option>
+                <option value="Recursos Humanos">Recursos Humanos</option>
               </select>
             </div>
           </div>

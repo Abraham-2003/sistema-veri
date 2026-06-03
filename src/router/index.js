@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from '../views/Admin/Dashboard.vue'
 import GerentePanel from '../views/Gerente/Dashboard.vue'
 import CoordinadorPanel from '../views/Coordinador/Dashboard.vue'
+import RHPanel from '../views/RH/Dashboard.vue'
 import Login from '../views/Login.vue'
 
 
@@ -46,7 +47,7 @@ const routes = [
       },
       {
         path: 'ReportesLab/:centroId',
-        name: 'ReportesLaboratorioCentro',
+        name: 'ReportesLaboratorioCentroAdmin',
         component: () =>
           import('../views/Admin/ReportesLaboratorioCentro.vue'),
         props: true
@@ -80,6 +81,10 @@ const routes = [
       {
         path: 'OrdenServicio',
         component: () => import('../views/Admin/OrdenServicio.vue')
+      },
+       {
+        path: 'AgendaAdmin',
+        component: () => import('../views/Admin/AgendaAdmin.vue')
       }
     ]
   },
@@ -185,8 +190,33 @@ const routes = [
       {
         path: 'OrdenServicio',
         component: () => import('../views/Coordinador/OrdenServicio.vue')
+      },
+      {
+        path: 'Agenda',
+        component: () => import('../views/Coordinador/Agenda.vue')
       }
 
+    ]
+  },
+  {
+    path: '/RecursosHumanos',
+    component: RHPanel,
+    meta: { requiresAuth: true, role: 'RecursosHumanos' },
+    children: [
+      {
+        path: '',
+        name: 'HomeRH',
+        component: () => import('../views/RH/HomeRH.vue')
+      },
+      {
+        path: 'Empleados',
+        component: () => import('../views/RH/Empleados.vue'),
+      },
+      {
+        path: 'Vacaciones',
+        component: () => import('../views/RH/Vacaciones.vue'),
+      },
+      
     ]
   },
   {

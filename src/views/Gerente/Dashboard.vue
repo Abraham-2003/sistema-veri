@@ -8,7 +8,7 @@
     </button>
     <nav class="navbar justify-content-center shadow-sm" >
       <img
-        src="../../assets/pwa-512x512.png"
+        src="../../assets/MOR - logo Verificentro H (1).png"
         alt="Logo"
         height="40"
         class="d-inline-block align-middle"
