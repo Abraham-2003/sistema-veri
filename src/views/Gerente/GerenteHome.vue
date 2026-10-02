@@ -1,86 +1,127 @@
 <template>
   <div class="container py-3">
-    <h5 class="mb-4 text-dark-emphasis text-center fw-semibold">
+
+    <h5 class="mb-4 text-center fw-semibold">
       Bienvenido, estos son tus recordatorios importantes.
     </h5>
 
-    <div class="row g-3">
+    <div class="row g-3 mb-4">
 
-      <!-- Vencimiento más próximo -->
-      <div class="col-12">
-        <div class="card border-start border-3 border-primary-subtle shadow-sm">
-          <div class="card-body py-3 px-4 d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-primary fw-semibold mb-1">Próximo vencimiento</div>
-              <div class="small text-muted">
-                {{ vencimientoProximo?.nombre || "—" }}
-                <strong>{{ vencimientoProximo?.fecha || "—" }}</strong>
-              </div>
+      <!-- Próximo vencimiento -->
+      <div class="col-md-4">
+        <div class="card dashboard-card h-100">
+          <div class="card-body">
+
+            <div class="dashboard-label">
+              Próximo vencimiento
             </div>
-            <button
-              class="btn btn-sm btn-outline-primary rounded-pill"
-              @click="mostrarCalendario = !mostrarCalendario"
-            >
-              <i class="bi bi-calendar-event me-1"></i> Ver calendario
-            </button>
+
+            <div class="dashboard-value">
+              {{ diasRestantes }}
+            </div>
+
+            <div class="dashboard-subtitle">
+              días restantes
+            </div>
+
+            <hr>
+
+            <div class="small text-muted">
+              {{ vencimientoProximo?.nombre || "Sin registros" }}
+            </div>
+
+            <div class="fw-semibold">
+              {{ vencimientoProximo?.fecha || "-" }}
+            </div>
+
           </div>
         </div>
-
-        <transition name="fade">
-          <VueCal
-          locale="es"
-          v-if="mostrarCalendario"
-          :events="eventosLaboratorio"
-          default-view="month"
-          active-view="month"
-          :disable-views="['years', 'week', 'day']"
-          style="height: 400px"
-          :on-event-click="(evento) => eventoClick(evento)"
-        />
-        </transition>
       </div>
 
-      <!-- Solicitudes pendientes -->
-      <div class="col-12">
-        <div class="card border-start border-3 border-warning-subtle shadow-sm">
-          <div class="card-body py-3 px-4 d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-warning fw-semibold mb-1">Solicitudes pendientes</div>
-              <div class="small text-muted">
-                Tienes <strong>{{ pendientes }}</strong> en espera de entrega
-              </div>
+      <!-- Solicitudes -->
+      <div class="col-md-4">
+        <div class="card dashboard-card h-100">
+          <div class="card-body">
+
+            <div class="dashboard-label">
+              Solicitudes pendientes
             </div>
-            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">
+
+            <div class="dashboard-value">
               {{ pendientes }}
-            </span>
+            </div>
+
+            <div class="dashboard-subtitle">
+              por atender
+            </div>
+
+            <hr>
+
+            <div class="small text-muted">
+              Solicitudes pendientes de entrega
+            </div>
+
           </div>
         </div>
       </div>
 
-      <!-- Infraestructura fuera de servicio -->
-      <div class="col-12">
-        <div class="card border-start border-3 border-danger-subtle shadow-sm">
-          <div class="card-body py-3 px-4 d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-danger fw-semibold mb-1">Infraestructura fuera de servicio</div>
-              <div class="small text-muted">
-                Tienes <strong>{{ fueraDeServicio }}</strong> elementos reportados
-              </div>
+      <!-- Infraestructura -->
+      <div class="col-md-4">
+        <div class="card dashboard-card h-100">
+          <div class="card-body">
+
+            <div class="dashboard-label">
+              Infraestructura
             </div>
-            <span class="badge bg-danger text-white px-3 py-2 rounded-pill">
+
+            <div class="dashboard-value">
               {{ fueraDeServicio }}
-            </span>
+            </div>
+
+            <div class="dashboard-subtitle">
+              fuera de servicio
+            </div>
+
+            <hr>
+
+            <div class="small text-muted">
+              Equipos o elementos reportados
+            </div>
+
           </div>
         </div>
       </div>
 
     </div>
+
+    <!-- Calendario -->
+
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white fw-semibold">
+        Calendario de vencimientos
+      </div>
+
+      <div class="card-body">
+
+        <VueCal
+          locale="es"
+          :events="eventosLaboratorio"
+          default-view="month"
+          active-view="month"
+          :disable-views="['years', 'week', 'day']"
+          style="height: 500px"
+          :on-event-click="(evento) => eventoClick(evento)"
+        />
+
+      </div>
+    </div>
+
   </div>
 </template>
 
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { db } from "../../servivces/auth.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import dayjs from "dayjs";
@@ -136,7 +177,16 @@ function parseFecha(fechaRaw) {
 
 const vencimientoProximo = ref(null);
 const eventosLaboratorio = ref([]);
-const mostrarCalendario = ref(false);
+const mostrarCalendario = ref(true);
+
+const diasRestantes = computed(() => {
+  if (!vencimientoProximo.value?.fechaReal) return "-";
+
+  return dayjs(vencimientoProximo.value.fechaReal).diff(
+    dayjs(),
+    "day"
+  );
+});
 
 async function cargarVencimientos() {
   if (!centroId) {
@@ -173,9 +223,10 @@ const ordenados = vencimientos
 if (ordenados.length) {
   const primero = ordenados[0];
   vencimientoProximo.value = {
-    nombre: primero.nombre,
-    fecha: dayjs(primero.fechaVencimiento).format("DD [de] MMMM"),
-  };
+  nombre: primero.nombre,
+  fecha: dayjs(primero.fechaVencimiento).format("DD [de] MMMM"),
+  fechaReal: primero.fechaVencimiento,
+};
 } else {
   vencimientoProximo.value = {
     nombre: "Sin próximos vencimientos",
@@ -221,6 +272,37 @@ onMounted(() => {
 });
 </script>
 <style>
+
+.dashboard-card {
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  transition: all .2s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+}
+
+.dashboard-label {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6c757d;
+}
+
+.dashboard-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 10px;
+}
+
+.dashboard-subtitle {
+  color: #6c757d;
+  font-size: .9rem;
+}
+
 .vuecal__event.vencimiento-evento {
   background-color: #dc3545 !important;
   color: white !important;
@@ -228,7 +310,9 @@ onMounted(() => {
   padding: 2px 4px;
   font-size: 12px;
 }
+
 .vuecal__cell--has-events {
   background-color: #ffe5e5 !important;
 }
+
 </style>

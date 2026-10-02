@@ -1,31 +1,19 @@
 <template>
-  <div
-    class="container py-4"
-    ref="contenidoReporte"
-    :class="{ 'modo-pdf': modoExportacion }"
-  >
+  <div class="container py-4" ref="contenidoReporte" :class="{ 'modo-pdf': modoExportacion }">
     <h3 class="mb-3">Reporte Diario - {{ ubicacionCentro }}</h3>
     <p>Fecha: {{ fechaSeleccionada }}</p>
 
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <button
-        class="btn btn-outline-primary"
-        @click="mostrarCalendario = !mostrarCalendario"
-      >
+      <p v-if="reporteSeleccionado?.nombreencargado" class="text-muted mb-3">
+        Este reporte fue realizado por
+        <strong>{{ reporteSeleccionado.nombreencargado }}</strong>
+      </p>
+      <button class="btn btn-outline-primary" @click="mostrarCalendario = !mostrarCalendario">
         {{ mostrarCalendario ? "Ocultar calendario" : "Mostrar calendario" }}
       </button>
 
-      <button
-        class="btn btn-danger d-flex align-items-center gap-2"
-        @click="descargarPDF"
-        :disabled="descargandoPDF"
-      >
-        <span
-          v-if="descargandoPDF"
-          class="spinner-border spinner-border-sm"
-          role="status"
-          aria-hidden="true"
-        ></span>
+      <button class="btn btn-danger d-flex align-items-center gap-2" @click="descargarPDF" :disabled="descargandoPDF">
+        <span v-if="descargandoPDF" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
 
         <span>
           {{ descargandoPDF ? "Generando PDF..." : "Descargar reporte en PDF" }}
@@ -36,15 +24,8 @@
     <transition name="fade">
       <!-- Calendario solo visible si mostrarCalendario es true -->
       <div v-if="mostrarCalendario" class="mt-3">
-        <VueCal
-          locale="es"
-          :selected-date="fechaSeleccionada"
-          :events="eventosDeReporte"
-          @event-click="seleccionarReporteDesdeEvento"
-          default-view="week"
-          hide-view-selector
-          style="height: 300px"
-        />
+        <VueCal locale="es" :selected-date="fechaSeleccionada" :events="eventosDeReporte"
+          @event-click="seleccionarReporteDesdeEvento" default-view="week" hide-view-selector style="height: 300px" />
       </div>
     </transition>
 
@@ -58,20 +39,12 @@
     <div v-else class="accordion" id="reporteCollapse">
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingCalibraciones">
-          <button
-            class="accordion-button"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseCalibraciones"
-          >
+          <button class="accordion-button" type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapseCalibraciones">
             Calibraciones
           </button>
         </h2>
-        <div
-          id="collapseCalibraciones"
-          class="accordion-collapse collapse show"
-          data-bs-parent="#reporteCollapse"
-        >
+        <div id="collapseCalibraciones" class="accordion-collapse collapse show" data-bs-parent="#reporteCollapse">
           <div class="accordion-body">
             <table class="table table-bordered table-sm text-center align-middle">
               <thead class="table-light">
@@ -89,20 +62,15 @@
                   <td>
                     <strong>{{ linea }}</strong>
                   </td>
-                  <td
-                    v-for="equipo in [
-                      'Analizador Gases',
-                      'Dinamómetros',
-                      'Fugas',
-                      'Comprobacion de gases',
-                      'Opacímetro',
-                    ]"
-                    :key="equipo"
-                  >
-                    <div
-                      :class="equipos[equipo] ? 'bg-success' : 'bg-danger'"
-                      style="width: 16px; height: 16px; margin: auto; border-radius: 3px"
-                    ></div>
+                  <td v-for="equipo in [
+                    'Analizador Gases',
+                    'Dinamómetros',
+                    'Fugas',
+                    'Comprobacion de gases',
+                    'Opacímetro',
+                  ]" :key="equipo">
+                    <div :class="equipos[equipo] ? 'bg-success' : 'bg-danger'"
+                      style="width: 16px; height: 16px; margin: auto; border-radius: 3px"></div>
                   </td>
                 </tr>
               </tbody>
@@ -121,158 +89,121 @@
       <!-- Gases -->
 
       <div class="accordion-item">
-  <h2 class="accordion-header" id="headingGases">
-    <button
-      class="accordion-button collapsed"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#collapseGases"
-    >
-      Gases
-    </button>
-  </h2>
+        <h2 class="accordion-header" id="headingGases">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapseGases">
+            Gases
+          </button>
+        </h2>
 
-  <div
-    id="collapseGases"
-    class="accordion-collapse collapse"
-    data-bs-parent="#reporteCollapse"
-  >
-    <div class="accordion-body">
+        <div id="collapseGases" class="accordion-collapse collapse" data-bs-parent="#reporteCollapse">
+          <div class="accordion-body">
 
-      <!-- =========================
+            <!-- =========================
            GASES EN USO
       ========================== -->
-      <h5 class="mb-3 fw-bold">Gases en uso</h5>
+            <h5 class="mb-3 fw-bold">Gases en uso</h5>
 
-      <div class="table-responsive">
-        <table class="table table-bordered align-middle">
-          <thead class="table-light text-center">
-            <tr>
-              <th>Tipo</th>
-              <th>Serie</th>
-              <th>PSI</th>
-              <th>Estatus</th>
-              <th>#Reporte</th>
-              <th>Observaciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(gas, i) in gasesUsoOrdenados"
-              :key="'uso-' + (gas.id ?? i)"
-              class="text-center"
-            >
-              <td class="fw-semibold">{{ gas.tipo }}</td>
-              <td>{{ gas.serie || '-' }}</td>
-              <td>{{ gas.psi || '-' }}</td>
-              <td>
-                {{ gas.estatus || '-' }}
-              </td>
-              <td>{{ gas.reporte || '-' }}</td>
-              <td>{{ gas.observaciones || 'Sin observaciones' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle">
+                <thead class="table-light text-center">
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Serie</th>
+                    <th>PSI</th>
+                    <th>Estatus</th>
+                    <th>#Reporte</th>
+                    <th>Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(gas, i) in gasesUsoOrdenados" :key="'uso-' + (gas.id ?? i)" class="text-center">
+                    <td class="fw-semibold">{{ gas.tipo }}</td>
+                    <td>{{ gas.serie || '-' }}</td>
+                    <td>{{ gas.psi || '-' }}</td>
+                    <td>
+                      {{ gas.estatus || '-' }}
+                    </td>
+                    <td>{{ gas.reporte || '-' }}</td>
+                    <td>{{ gas.observaciones || 'Sin observaciones' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-      <!-- =========================
+            <!-- =========================
            IMÁGENES POR TIPO
       ========================== -->
-      <div
-  v-if="imagenesGases.length"
-  class="mt-5"
->
-  <h5 class="fw-bold mb-3">Evidencia fotográfica</h5>
+            <div v-if="imagenesGases.length" class="mt-5">
+              <h5 class="fw-bold mb-3">Evidencia fotográfica</h5>
 
-  <div v-viewer class="row g-4">
+              <div v-viewer class="row g-4">
 
-    <div
-      v-for="(img, index) in imagenesGases"
-      :key="index"
-      class="col-md-4"
-    >
-      <div class="card shadow-sm h-100 border-0">
+                <div v-for="(img, index) in imagenesGases" :key="index" class="col-md-4">
+                  <div class="card shadow-sm h-100 border-0">
 
-        <div
-          class="card-header text-center fw-semibold"
-          :class="{
-            'bg-primary text-white': img.tipo === 'media',
-            'bg-warning text-dark': img.tipo === 'baja',
-            'bg-danger text-white': img.tipo === 'cero'
-          }"
-        >
-          Gas {{ img.tipo.charAt(0).toUpperCase() + img.tipo.slice(1) }}
-        </div>
+                    <div class="card-header text-center fw-semibold" :class="{
+                      'bg-primary text-white': img.tipo === 'media',
+                      'bg-warning text-dark': img.tipo === 'baja',
+                      'bg-danger text-white': img.tipo === 'cero'
+                    }">
+                      Gas {{ img.tipo.charAt(0).toUpperCase() + img.tipo.slice(1) }}
+                    </div>
 
-        <div class="card-body text-center">
-          <img
-            :src="img.url"
-            class="img-fluid rounded"
-            style="max-height: 250px; object-fit: contain; cursor: zoom-in"
-          />
-        </div>
+                    <div class="card-body text-center">
+                      <img :src="img.url" class="img-fluid rounded"
+                        style="max-height: 250px; object-fit: contain; cursor: zoom-in" />
+                    </div>
 
-      </div>
-    </div>
+                  </div>
+                </div>
 
-  </div>
-</div>
+              </div>
+            </div>
 
-      <!-- =========================
+            <!-- =========================
            GASES EN STOCK
       ========================== -->
-      <h5 class="mt-5 mb-3 fw-bold">Gases en stock</h5>
+            <h5 class="mt-5 mb-3 fw-bold">Gases en stock</h5>
 
-      <div class="table-responsive">
-        <table class="table table-bordered align-middle">
-          <thead class="table-light text-center">
-            <tr>
-              <th>Tipo</th>
-              <th>Serie</th>
-              <th>PSI</th>
-              <th>Estatus</th>
-              <th>#Reporte</th>
-              <th>Observaciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(gas, i) in gasesStockOrdenados"
-              :key="'stock-' + (gas.id ?? i)"
-              class="text-center"
-            >
-              <td class="fw-semibold">{{ gas.tipo }}</td>
-              <td>{{ gas.serie || '-' }}</td>
-              <td>{{ gas.psi || '-' }}</td>
-              <td>{{ gas.estatus || '-' }}</td>
-              <td>{{ gas.reporte || '-' }}</td>
-              <td>{{ gas.observaciones || 'Sin observaciones' }}</td>
-            </tr>
-          </tbody>
-        </table>
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle">
+                <thead class="table-light text-center">
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Serie</th>
+                    <th>PSI</th>
+                    <th>Estatus</th>
+                    <th>#Reporte</th>
+                    <th>Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(gas, i) in gasesStockOrdenados" :key="'stock-' + (gas.id ?? i)" class="text-center">
+                    <td class="fw-semibold">{{ gas.tipo }}</td>
+                    <td>{{ gas.serie || '-' }}</td>
+                    <td>{{ gas.psi || '-' }}</td>
+                    <td>{{ gas.estatus || '-' }}</td>
+                    <td>{{ gas.reporte || '-' }}</td>
+                    <td>{{ gas.observaciones || 'Sin observaciones' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
       </div>
-
-    </div>
-  </div>
-</div>
 
       <!-- Compresor -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingCompresor">
-          <button
-            class="accordion-button collapsed"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseCompresor"
-          >
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapseCompresor">
             Compresor
           </button>
         </h2>
-        <div
-          id="collapseCompresor"
-          class="accordion-collapse collapse"
-          data-bs-parent="#reporteCollapse"
-        >
+        <div id="collapseCompresor" class="accordion-collapse collapse" data-bs-parent="#reporteCollapse">
           <div class="accordion-body">
             <table class="table table-bordered table-sm text-center align-middle">
               <thead class="table-light">
@@ -297,21 +228,13 @@
       <!-- Líneas -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingLineas">
-          <button
-            class="accordion-button collapsed"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseLineas"
-          >
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapseLineas">
             Líneas
           </button>
         </h2>
 
-        <div
-          id="collapseLineas"
-          class="accordion-collapse collapse"
-          data-bs-parent="#reporteCollapse"
-        >
+        <div id="collapseLineas" class="accordion-collapse collapse" data-bs-parent="#reporteCollapse">
           <div class="accordion-body">
             <table class="table table-bordered table-sm text-center align-middle">
               <thead class="table-light">
@@ -335,25 +258,16 @@
                   <!-- OPACÍMETRO -->
                   <td>
                     <!-- OK -->
-                    <span
-                      v-if="datos.opacimetro?.estado === 'Operativo'"
-                      class="badge bg-success"
-                    >
+                    <span v-if="datos.opacimetro?.estado === 'Operativo'" class="badge bg-success">
                       Operativo
                     </span>
 
                     <!-- FUERA DE SERVICIO -->
-                    <span
-                      v-else-if="datos.opacimetro?.estado === 'Fuera de servicio'"
-                      class="badge bg-danger"
-                    >
+                    <span v-else-if="datos.opacimetro?.estado === 'Fuera de servicio'" class="badge bg-danger">
                       Fuera de servicio
                     </span>
                     <!-- EN MANTENIMIENTO -->
-                    <span
-                      v-else-if="datos.opacimetro?.estado === 'En mantenimiento'"
-                      class="badge bg-warning"
-                    >
+                    <span v-else-if="datos.opacimetro?.estado === 'En mantenimiento'" class="badge bg-warning">
                       En mantenimiento
                     </span>
 
@@ -377,21 +291,13 @@
       <!-- Tacómetros -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingTacometros">
-          <button
-            class="accordion-button collapsed"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseTacometros"
-          >
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapseTacometros">
             Tacómetros
           </button>
         </h2>
 
-        <div
-          id="collapseTacometros"
-          class="accordion-collapse collapse"
-          data-bs-parent="#reporteCollapse"
-        >
+        <div id="collapseTacometros" class="accordion-collapse collapse" data-bs-parent="#reporteCollapse">
           <div class="accordion-body">
             <table class="table table-bordered table-sm text-center align-middle">
               <thead class="table-light">
@@ -418,36 +324,22 @@
                   </td>
 
                   <!-- Campos normales -->
-                  <td
-                    v-for="campo in ['Pinza', 'OBD', 'Batería', 'Encendedor', 'Contacto']"
-                    :key="campo"
-                  >
-                    <i
-                      :class="
-                        datos[campo]
-                          ? 'bi bi-check-circle-fill text-success'
-                          : 'bi bi-x-circle-fill text-danger'
-                      "
-                      :title="datos[campo] ? 'OK' : 'MAL'"
-                    ></i>
+                  <td v-for="campo in ['Pinza', 'OBD', 'Batería', 'Encendedor', 'Contacto']" :key="campo">
+                    <i :class="datos[campo]
+                      ? 'bi bi-check-circle-fill text-success'
+                      : 'bi bi-x-circle-fill text-danger'
+                      " :title="datos[campo] ? 'OK' : 'MAL'"></i>
                   </td>
 
                   <!-- Especiales -->
                   <td class="text-start">
                     <div v-if="datos.especiales">
-                      <div
-                        v-for="(valor, nombre) in datos.especiales"
-                        :key="nombre"
-                        class="d-flex align-items-center mb-1"
-                      >
-                        <i
-                          :class="
-                            valor
-                              ? 'bi bi-check-circle-fill text-success'
-                              : 'bi bi-x-circle-fill text-danger'
-                          "
-                          class="me-1"
-                        ></i>
+                      <div v-for="(valor, nombre) in datos.especiales" :key="nombre"
+                        class="d-flex align-items-center mb-1">
+                        <i :class="valor
+                          ? 'bi bi-check-circle-fill text-success'
+                          : 'bi bi-x-circle-fill text-danger'
+                          " class="me-1"></i>
                         <small>{{ nombre }}</small>
                       </div>
                     </div>
@@ -469,28 +361,16 @@
       <!-- Observaciones -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingObservaciones">
-          <button
-            class="accordion-button collapsed"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseObservaciones"
-          >
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapseObservaciones">
             Observaciones
           </button>
         </h2>
-        <div
-          id="collapseObservaciones"
-          class="accordion-collapse collapse"
-          data-bs-parent="#reporteCollapse"
-        >
+        <div id="collapseObservaciones" class="accordion-collapse collapse" data-bs-parent="#reporteCollapse">
           <div class="accordion-body">
             <div class="mb-2">
-              <textarea
-                v-model="reporteSeleccionado.observaciones"
-                class="form-control"
-                rows="4"
-                placeholder="Agregar observaciones generales..."
-              ></textarea>
+              <textarea v-model="reporteSeleccionado.observaciones" class="form-control" rows="4"
+                placeholder="Agregar observaciones generales..."></textarea>
             </div>
 
             <div class="text-end">
@@ -594,10 +474,10 @@ const seleccionarFecha = (evento) => {
     evento?.start instanceof Date
       ? evento.start
       : evento instanceof Date
-      ? evento
-      : evento?.date instanceof Date
-      ? evento.date
-      : null;
+        ? evento
+        : evento?.date instanceof Date
+          ? evento.date
+          : null;
 
   if (!fechaReal || !dayjs(fechaReal).isValid()) {
     return;
@@ -613,8 +493,8 @@ const eventosDeReporte = computed(() =>
       r.fecha instanceof Date
         ? r.fecha
         : r.fecha?.toDate
-        ? r.fecha.toDate()
-        : new Date(r.fecha);
+          ? r.fecha.toDate()
+          : new Date(r.fecha);
 
     return {
       id: r.id,
@@ -792,24 +672,29 @@ onMounted(async () => {
   background-color: #fbeab3ff !important;
   border: 2px solid #ffc107;
 }
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
+
 .modo-pdf .accordion-collapse {
   display: block !important;
   height: auto !important;
   overflow: visible !important;
   transition: none !important;
 }
+
 .hover-shadow:hover {
   cursor: pointer;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
 }
+
 .imagen-reporte {
   transition: transform 0.2s ease;
 }

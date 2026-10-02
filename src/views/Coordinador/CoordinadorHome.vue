@@ -42,43 +42,187 @@
           <i class="bi bi-exclamation-triangle stat-icon"></i>
         </div>
       </div>
+      <!-- CALENDARIO + PANEL -->
+      <div class="row g-3">
+        <!-- Calendario -->
+        <div class="col-lg-9">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Calendario de Calibraciones</h5>
 
-      <!-- Accesos rápidos -->
-      <h3 class="subtitulo">Accesos Rápidos</h3>
-      <div class="quick-actions">
-        <router-link to="/Coordinador/Reportes" class="quick-card">
-          <i class="bi bi-bar-chart"></i>
-          <span>Reportes</span>
-        </router-link>
+                <select v-model="centroSeleccionado" class="form-select" style="max-width: 320px">
+                  <option value="">Todos los centros</option>
 
-        <router-link to="/Coordinador/Solicitudes" class="quick-card">
-          <i class="bi bi-envelope"></i>
-          <span>Solicitudes</span>
-        </router-link>
+                  <option v-for="(centro, id) in centros" :key="id" :value="id">
+                    {{ centro.ubicacion }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <VueCal locale="es" :events="eventosFiltrados" default-view="month" active-view="month"
+                :disable-views="['years', 'week', 'day']" events-on-month-view="short" @cell-click="seleccionarFecha"
+                style="height: 700px" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel lateral -->
+        <div class="col-lg-3">
+          <div class="card shadow-sm border-0 h-100">
+            <div class="card-header">
+              <strong>
+                {{ fechaSeleccionada || "Seleccione un día" }}
+              </strong>
+            </div>
+
+            <div class="card-body" style="max-height: 700px; overflow-y: auto">
+              <div v-if="!eventosSeleccionados.length" class="text-center text-muted mt-4">
+                No hay eventos seleccionados.
+              </div>
+
+              <div v-for="evento in eventosSeleccionados" :key="evento.folio" class="border rounded p-3 mb-3">
+                <div class="fw-bold">
+                  {{ evento.centro }}
+                </div>
+
+                <div class="small text-muted mb-2">
+                  {{ evento.tipo }}
+                </div>
+
+                <div class="mb-2">
+                  <strong>Subtipo:</strong>
+                  {{ evento.subtipo || "-" }}
+                </div>
+
+                <div class="mb-2">
+                  <strong>Folio:</strong>
+                  {{ evento.folio }}
+                </div>
+
+                <div>
+                  <strong>Vence:</strong>
+                  {{ evento.vencimiento }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLA -->
+      <h3 class="subtitulo mt-4">Próximos Vencimientos</h3>
+
+      <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Centro</th>
+                <th>Tipo</th>
+                <th>Subtipo</th>
+                <th>Vencimiento</th>
+                <th>Días</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr v-for="item in proximosVencimientos" :key="`${item.centro}-${item.fecha}`">
+                <td>{{ item.centro }}</td>
+                <td>{{ item.tipo }}</td>
+                <td>{{ item.subtipo }}</td>
+                <td>{{ item.fecha }}</td>
+
+                <td>
+                  <span class="badge" :class="item.dias <= 30
+                      ? 'bg-danger'
+                      : item.dias <= 60
+                        ? 'bg-warning text-dark'
+                        : 'bg-success'
+                    ">
+                    {{ item.dias }} días
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <br>
+      <div >
+        <h4 class="section-title">Desempeño por Verificentro</h4>
+
+        <!-- Selector de centro -->
+        <select v-model="centroSeleccionado" class="form-select mb-4">
+          <option disabled value="">Selecciona un centro</option>
+
+          <option v-for="centro in centros" :key="centro.id" :value="centro.id">
+            {{ centro.ubicacion }}
+          </option>
+        </select>
+
+        <!-- Filtros de fecha -->
+        <div v-if="centroSeleccionado" class="mb-3 d-flex gap-3">
+          <div>
+            <label>Fecha inicio:</label>
+            <input type="date" v-model="fechaInicio" />
+          </div>
+          <div>
+            <label>Fecha fin:</label>
+            <input type="date" v-model="fechaFin" />
+          </div>
+          <button class="btn btn-primary" @click="cargarReportesCentro">Filtrar</button>
+        </div>
+
+        <!-- Gráfica de líneas -->
+        <div v-if="chartData" style="width: 100%; max-width: 800px; height: 400px">
+          <Line :data="chartData" :options="chartOptions" />
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../servivces/auth.js"; // ajusta según tu ruta
-import { Bar } from "vue-chartjs";
+
+import { Bar, Line } from "vue-chartjs";
+import VueCal from "vue-cal";
+import "vue-cal/dist/vuecal.css";
 import {
   Chart as ChartJS,
   Title,
   Tooltip,
   Legend,
   BarElement,
+  LineElement,
+  PointElement,
   CategoryScale,
   LinearScale,
 } from "chart.js";
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale
+);
+
+dayjs.extend(isSameOrBefore);
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+
 dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 const user = ref(JSON.parse(localStorage.getItem("user")) || {});
 const centrosActivos = ref(0);
@@ -87,6 +231,18 @@ const reportesHoy = ref(0);
 const infraestructuraFueraServicio = ref(0);
 const inicioMes = dayjs().startOf("month");
 const hoy = dayjs().endOf("day");
+const fechaInicio = ref(dayjs().startOf("month").format("YYYY-MM-DD"));
+const fechaFin = ref(dayjs().endOf("day").format("YYYY-MM-DD"));
+const chartData = ref(null);
+const chartOptions = {
+  responsive: true,
+  plugins: {
+    title: {
+      display: true,
+      text: "Lecturas de gases por día",
+    },
+  },
+};
 
 async function obtenerReportesHoy() {
   const inicioDia = dayjs().startOf("day").toISOString();
@@ -136,6 +292,11 @@ onMounted(async () => {
 const centros = ref({});
 const resumenPorCentro = ref({});
 const centroSeleccionado = ref("");
+const eventosCalibraciones = ref([]);
+const proximosVencimientos = ref([]);
+const calibracionSeleccionada = ref(null);
+const eventosSeleccionados = ref([]);
+const fechaSeleccionada = ref(null);
 
 async function cargarCentros() {
   const snapshot = await getDocs(collection(db, "centros"));
@@ -258,6 +419,84 @@ async function cargarReportes() {
     };
   });
 }
+async function cargarCalibraciones() {
+  const snapshot = await getDocs(collection(db, "ReporteLab"));
+
+  const eventos = [];
+  const proximos = [];
+
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+
+    if (!data.vencimiento) return;
+
+    const fecha = dayjs(data.vencimiento);
+
+    const nombreCentro = centros.value[data.centroId]?.ubicacion || "Sin centro";
+
+    const dias = fecha.diff(dayjs(), "day");
+
+    if (dias >= 0) {
+      proximos.push({
+        centro: nombreCentro,
+        tipo: data.tipo,
+        subtipo: data.subtipo,
+        fecha: fecha.format("DD/MM/YYYY"),
+        dias,
+      });
+    }
+    const inicio = fecha.hour(10).minute(0).second(0);
+    const fin = fecha.hour(11).minute(0).second(0);
+
+    eventos.push({
+      start: inicio.toDate(),
+      end: fin.toDate(),
+
+      title: `${data.tipo}`,
+      centroId: data.centroId,
+      centro: nombreCentro,
+      tipo: data.tipo,
+      subtipo: data.subtipo,
+      folio: data.folio,
+      vencimiento: data.vencimiento,
+
+      class: obtenerClaseEvento(fecha),
+    });
+  });
+  eventosCalibraciones.value = eventos;
+  console.log(eventos[0]);
+
+  proximosVencimientos.value = proximos.sort((a, b) => a.dias - b.dias).slice(0, 10);
+}
+
+function seleccionarFecha(fecha) {
+  console.log("CLICK DIA", fecha);
+
+  fechaSeleccionada.value = dayjs(fecha).format("DD/MM/YYYY");
+
+  eventosSeleccionados.value = eventosFiltrados.value.filter((evento) =>
+    dayjs(evento.start).isSame(dayjs(fecha), "day")
+  );
+}
+function eventoClick(evento) {
+  calibracionSeleccionada.value = evento;
+}
+function obtenerClaseEvento(fecha) {
+  const dias = dayjs(fecha).diff(dayjs(), "day");
+
+  if (dias <= 30) return "evento-critico";
+
+  if (dias <= 60) return "evento-alerta";
+
+  return "evento-normal";
+}
+const eventosFiltrados = computed(() => {
+  if (!centroSeleccionado.value) return eventosCalibraciones.value;
+
+  return eventosCalibraciones.value.filter(
+    (e) => e.centroId === centroSeleccionado.value
+  );
+});
 
 const solicitudesPorCentro = ref({});
 
@@ -281,11 +520,107 @@ async function cargarSolicitudes() {
 
   solicitudesPorCentro.value = agrupado;
 }
+async function cargarReportesCentro() {
+  if (!centroSeleccionado.value) return;
+
+  const inicio = dayjs(fechaInicio.value);
+  const fin = dayjs(fechaFin.value);
+
+  const q = query(
+    collection(db, "reportes"),
+    where("centroId", "==", centroSeleccionado.value)
+  );
+
+  const snapshot = await getDocs(q);
+
+
+
+  snapshot.docs.forEach(doc => {
+  });
+  const datos = snapshot.docs.map((doc) => doc.data());
+
+
+  const filtrados = datos.filter((r) => {
+    const fecha = dayjs(r.fecha);
+    return fecha.isSameOrAfter(inicio, "day") &&
+      fecha.isSameOrBefore(fin, "day");
+  });
+
+
+  const registros = [];
+  filtrados.forEach((r) => {
+    const gasesUso = r.gases?.uso || {};
+    ["Baja", "Media", "Cero"].forEach((tipo) => {
+      const arr = Array.isArray(gasesUso[tipo]) ? gasesUso[tipo] : [];
+      arr.forEach((gas) => {
+        registros.push({
+          tipo,
+          psi: gas.psi,
+          fecha: gas.fecha || r.fecha,
+        });
+      });
+    });
+  });
+
+  const labels = [
+    ...new Set(registros.map((r) => dayjs(r.fecha).format("YYYY-MM-DD"))),
+  ].sort();
+
+
+  const series = {
+    Baja: labels.map((f) => {
+      const match = registros.find(
+        (r) => r.tipo === "Baja" && dayjs(r.fecha).format("YYYY-MM-DD") === f
+      );
+      return match ? match.psi : null;
+    }),
+    Media: labels.map((f) => {
+      const match = registros.find(
+        (r) => r.tipo === "Media" && dayjs(r.fecha).format("YYYY-MM-DD") === f
+      );
+      return match ? match.psi : null;
+    }),
+    Cero: labels.map((f) => {
+      const match = registros.find(
+        (r) => r.tipo === "Cero" && dayjs(r.fecha).format("YYYY-MM-DD") === f
+      );
+      return match ? match.psi : null;
+    }),
+  };
+
+  chartData.value = {
+    labels,
+    datasets: [
+      {
+        label: "Gas Baja",
+        data: series.Baja,
+        borderColor: "#28a745",
+        backgroundColor: "#28a745",
+        tension: 0.3,
+      },
+      {
+        label: "Gas Media",
+        data: series.Media,
+        borderColor: "#007bff",
+        backgroundColor: "#007bff",
+        tension: 0.3,
+      },
+      {
+        label: "Gas Cero",
+        data: series.Cero,
+        borderColor: "#dc3545",
+        backgroundColor: "#dc3545",
+        tension: 0.3,
+      },
+    ],
+  };
+}
 
 onMounted(async () => {
   await cargarCentros();
   await cargarReportes();
   await cargarSolicitudes();
+  await cargarCalibraciones();
 });
 </script>
 <style scoped>
@@ -295,6 +630,7 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 2rem;
 }
+
 .grid-stats {
   display: grid;
   margin: 3%;
@@ -332,15 +668,19 @@ onMounted(async () => {
 .stat-card.primary {
   border-top-color: #0d6efd;
 }
+
 .stat-card.success {
   border-top-color: #198754;
 }
+
 .stat-card.warning {
   border-top-color: #ffc107;
 }
+
 .stat-card.danger {
   border-top-color: #dc3545;
 }
+
 .quick-actions {
   display: grid;
   margin: 3%;
@@ -355,13 +695,13 @@ onMounted(async () => {
   text-align: center;
   text-decoration: none;
   color: #212529;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
 }
 
 .quick-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .quick-card i {
@@ -370,6 +710,7 @@ onMounted(async () => {
   margin-bottom: 0.5rem;
   display: block;
 }
+
 /* Título de sección */
 .section-title {
   font-weight: 600;
@@ -419,4 +760,33 @@ onMounted(async () => {
   border-color: #e9ecef !important;
 }
 
+.vuecal__event.evento-calibracion {
+  background: #dc3545 !important;
+  color: #fff !important;
+  border-radius: 6px;
+}
+
+:deep(.vuecal__cell--has-events) {
+  background-color: #fff3cd !important;
+  cursor: pointer;
+}
+
+:deep(.evento-critico) {
+  background: #dc3545 !important;
+  color: white !important;
+}
+
+:deep(.evento-alerta) {
+  background: #ffc107 !important;
+  color: #000 !important;
+}
+
+:deep(.evento-normal) {
+  background: #198754 !important;
+  color: white !important;
+}
+
+:deep(.vuecal__event) {
+  display: none !important;
+}
 </style>

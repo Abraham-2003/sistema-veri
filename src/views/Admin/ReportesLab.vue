@@ -1,15 +1,23 @@
 <template>
   <div class="container py-4">
     <h2 class="titulo">Vencimientos por Centro</h2>
+    <div class="d-flex gap-2 mb-3">
+
+      <button class="btn btn-success" @click="descargarReporteFaltantes">
+        <i class="fas fa-file-excel me-2"></i>
+        Descargar reporte de calibraciones faltantes
+      </button>
+
+      <button class="btn btn-danger" @click="descargarReporteVencidos">
+        <i class="fas fa-file-excel me-2"></i>
+        Descargar calibraciones vencidas
+      </button>
+
+    </div>
 
     <div class="grid-centros">
-      <div
-        v-for="centro in centrosConRiesgo"
-        :key="centro.id"
-        class="centro-card"
-        :class="centro.riesgo.clase"
-        @click="verDetalleCentro(centro)"
-      >
+      <div v-for="centro in centrosConRiesgo" :key="centro.id" class="centro-card" :class="centro.riesgo.clase"
+        @click="verDetalleCentro(centro)">
         <div class="centro-header">
           <h3>{{ centro.ubicacion }}</h3>
           <span class="badge" :class="centro.riesgo.badge">
@@ -40,12 +48,339 @@ import { useRouter } from "vue-router";
 import { db } from "../../servivces/auth.js";
 import { collection, getDocs } from "firebase/firestore";
 import dayjs from "dayjs";
+import XLSX from "xlsx-js-style";
 
 const router = useRouter();
 
 const centros = ref([]);
 const reportesLab = ref([]);
 const gerentes = ref([]);
+// ==================== CALIBRACIONES ====================
+
+const CALIBRACIONES = {
+  ANALIZADORES: {
+    aplica: "todasLineas",
+    subtipos: ["Analizadores"],
+  },
+
+  OPACIMETRO: {
+    aplica: "lineaDual",
+    subtipos: ["Opacímetro"],
+  },
+
+  DINAMOMETROS: {
+    aplica: "todasLineas",
+    subtipos: [
+      "Celda de carga",
+      "Rodillo, brazo y palanca",
+      "Parásitas",
+      "Dinamómetro",
+    ],
+  },
+
+  "DINAMOMETROS MENSUALES": {
+    aplica: "todasLineas",
+    subtipos: [
+      "KEYTRONIS SA DE CV",
+      "SDE (SISTEMA DE DIAGNOSTICO Y EVALUCION)",
+    ],
+  },
+
+  TACOMETROS: {
+    aplica: "todasLineas",
+    subtipos: [
+      "Pinza",
+      "Batería",
+      "No. Contacto",
+    ],
+  },
+
+  "ESTACIÓN METEOROLÓGICA 1": {
+    aplica: "centro",
+    subtipos: [
+      "Humedad",
+      "Presión",
+      "Temperatura",
+    ],
+  },
+
+  "ESTACIÓN METEOROLÓGICA 2": {
+    aplica: "centro",
+    subtipos: [
+      "Humedad",
+      "Presión",
+      "Temperatura",
+    ],
+  },
+
+  DIESEL: {
+    aplica: "lineaDual",
+    subtipos: [
+      "Termocopla",
+      "Lector óptico",
+    ],
+  },
+
+  "MANOMETROS LINEAS": {
+    aplica: "todasLineas",
+    subtipos: [
+      "Cero",
+      "Media",
+      "Baja",
+    ],
+  },
+
+  "MANOMETRO COMPRESOR": {
+    aplica: "centro",
+    subtipos: [],
+  },
+
+  "MANOMETROS CUARTO DE GASES (PRESION EN LINEA)": {
+    aplica: "centro",
+    subtipos: [
+      "Cero",
+      "Media",
+      "Baja",
+    ],
+  },
+
+  "MANOMETROS CUARTO DE GASES (PRESION EN TANQUE)": {
+    aplica: "centro",
+    subtipos: [
+      "Cero",
+      "Media",
+      "Baja",
+    ],
+  },
+
+  "VALVULA DE ALIVIO (COMPRESOR)": {
+    aplica: "centro",
+    subtipos: [],
+  },
+
+  PESAS: {
+    aplica: "centro",
+    subtipos: [],
+  },
+
+  "FILTRO DE CALIBRACIÓN": {
+    aplica: "lineaDual",
+    subtipos: [],
+  },
+};
+
+const crearIndiceReportes = () => {
+
+  const indice = new Map();
+
+  reportesLab.value.forEach(r => {
+
+    const key = [
+      r.centroId,
+      r.tipo,
+      r.subtipo ?? "",
+      r.linea ?? "CENTRO"
+    ].join("|");
+
+    indice.set(key, true);
+
+  });
+
+  return indice;
+
+};
+
+const generarEsperadas = (centro) => {
+
+  const lista = [];
+
+  Object.entries(CALIBRACIONES).forEach(([tipo, config]) => {
+
+    if (config.aplica === "centro") {
+
+      if (config.subtipos.length) {
+
+        config.subtipos.forEach(subtipo => {
+
+          lista.push({
+
+            centroId: centro.id,
+
+            centro: centro.ubicacion,
+
+            tipo,
+
+            subtipo,
+
+            linea: "CENTRO"
+
+          });
+
+        });
+
+      } else {
+
+        lista.push({
+
+          centroId: centro.id,
+
+          centro: centro.ubicacion,
+
+          tipo,
+
+          subtipo: "",
+
+          linea: "CENTRO"
+
+        });
+
+      }
+
+    }
+
+    if (config.aplica === "todasLineas") {
+
+      for (let linea = 1; linea <= centro.lineas; linea++) {
+
+        if (config.subtipos.length) {
+
+          config.subtipos.forEach(subtipo => {
+
+            lista.push({
+
+              centroId: centro.id,
+
+              centro: centro.ubicacion,
+
+              tipo,
+
+              subtipo,
+
+              linea
+
+            });
+
+          });
+
+        } else {
+
+          lista.push({
+
+            centroId: centro.id,
+
+            centro: centro.ubicacion,
+
+            tipo,
+
+            subtipo: "",
+
+            linea
+
+          });
+
+        }
+
+      }
+
+    }
+
+    if (config.aplica === "lineaDual") {
+
+      if (!centro.lineaDual) return;
+
+      if (config.subtipos.length) {
+
+        config.subtipos.forEach(subtipo => {
+
+          lista.push({
+
+            centroId: centro.id,
+
+            centro: centro.ubicacion,
+
+            tipo,
+
+            subtipo,
+
+            linea: centro.lineaDual
+
+          });
+
+        });
+
+      } else {
+
+        lista.push({
+
+          centroId: centro.id,
+
+          centro: centro.ubicacion,
+
+          tipo,
+
+          subtipo: "",
+
+          linea: centro.lineaDual
+
+        });
+
+      }
+
+    }
+
+  });
+
+  return lista;
+
+};
+
+const obtenerFaltantes = () => {
+
+  const indice = crearIndiceReportes();
+
+  const faltantes = [];
+
+  centros.value.forEach(centro => {
+
+    const esperadas = generarEsperadas(centro);
+
+    esperadas.forEach(item => {
+
+      const key = [
+
+        item.centroId,
+
+        item.tipo,
+
+        item.subtipo,
+
+        item.linea
+
+      ].join("|");
+
+      if (!indice.has(key)) {
+
+        faltantes.push({
+
+          centro: item.centro,
+
+          linea: item.linea,
+
+          tipo: item.tipo,
+
+          subtipo: item.subtipo || "-"
+
+        });
+
+      }
+
+    });
+
+  });
+
+  return faltantes;
+
+};
 
 /* 🔹 Cargas */
 const cargarCentros = async () => {
@@ -65,7 +400,7 @@ const cargarGerentes = async () => {
     .filter((u) => u.rol === "Gerente");
 };
 
-/* 🔹 Helpers */
+
 const nombreEncargado = (id) => {
   const g = gerentes.value.find((x) => x.id === id);
   return g ? g.nombre : "Sin asignar";
@@ -125,6 +460,425 @@ const verDetalleCentro = (centro) => {
     name: "ReportesLaboratorioCentroAdmin",
     params: { centroId: centro.id },
   });
+};
+const descargarReporteVencidos = () => {
+  if (!reportesLab.value.length) {
+    alert("No hay reportes de laboratorio cargados");
+    return;
+  }
+
+  const hoy = dayjs().startOf("day");
+
+  // Obtener únicamente reportes vencidos
+  const vencidos = reportesLab.value.filter((r) => {
+    if (!r.vencimiento) return false;
+
+    const fechaVencimiento = dayjs(r.vencimiento);
+
+    return fechaVencimiento.isBefore(hoy, "day");
+  });
+
+  if (!vencidos.length) {
+    alert("No existen calibraciones vencidas");
+    return;
+  }
+
+  // =====================================================
+  // CONSTRUIR INFORMACIÓN PARA EXCEL
+  // =====================================================
+
+  const datosExcel = vencidos.map((reporte) => {
+    const centro = centros.value.find(
+      (c) => c.id === reporte.centroId
+    );
+
+    const fechaVencimiento = dayjs(reporte.vencimiento);
+
+    const diasVencido = hoy.diff(fechaVencimiento, "day");
+
+    return {
+      "Centro": centro?.ubicacion || "Centro no encontrado",
+
+      "Tipo": reporte.tipo || "—",
+
+      "Subtipo": reporte.subtipo || "—",
+
+      "Folio": reporte.folio || "—",
+
+      "Fecha Calibración": reporte.calibracion || "—",
+
+      "Fecha Dictamen": reporte.dictamen || "—",
+
+      "Fecha Vencimiento": reporte.vencimiento || "—",
+
+      "Días Vencido": diasVencido,
+
+      "PDF": reporte.pdfUrl || "—",
+    };
+  });
+
+  // =====================================================
+  // CREAR EXCEL
+  // =====================================================
+
+  const wb = XLSX.utils.book_new();
+
+  const ws = XLSX.utils.json_to_sheet(datosExcel);
+
+  // =====================================================
+  // ESTILO
+  // =====================================================
+
+  const rango = XLSX.utils.decode_range(ws["!ref"]);
+
+  // Encabezados
+  for (let C = rango.s.c; C <= rango.e.c; C++) {
+    const celda = ws[
+      XLSX.utils.encode_cell({
+        r: 0,
+        c: C,
+      })
+    ];
+
+    if (!celda) continue;
+
+    celda.s = {
+      font: {
+        bold: true,
+        color: "FFFFFF",
+        sz: 11,
+      },
+      fill: {
+        fgColor: {
+          rgb: "9C0006",
+        },
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+        wrapText: true,
+      },
+    };
+  }
+
+  // Filas
+  for (let R = 1; R <= rango.e.r; R++) {
+    for (let C = rango.s.c; C <= rango.e.c; C++) {
+      const celda = ws[
+        XLSX.utils.encode_cell({
+          r: R,
+          c: C,
+        })
+      ];
+
+      if (!celda) continue;
+
+      celda.s = {
+        alignment: {
+          vertical: "center",
+          wrapText: true,
+        },
+        border: {
+          bottom: {
+            style: "thin",
+            color: {
+              rgb: "D9D9D9",
+            },
+          },
+        },
+      };
+    }
+
+    // Resaltar días vencidos
+    const indiceDiasVencido = datosExcel[0]
+      ? Object.keys(datosExcel[0]).indexOf("Días Vencido")
+      : -1;
+
+    if (indiceDiasVencido >= 0) {
+      const celdaDias = ws[
+        XLSX.utils.encode_cell({
+          r: R,
+          c: indiceDiasVencido,
+        })
+      ];
+
+      if (celdaDias) {
+        celdaDias.s = {
+          font: {
+            bold: true,
+            color: "9C0006",
+          },
+          fill: {
+            fgColor: {
+              rgb: "FFC7CE",
+            },
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+          },
+        };
+      }
+    }
+  }
+
+  // =====================================================
+  // ANCHOS DE COLUMNAS
+  // =====================================================
+
+  ws["!cols"] = [
+    { wch: 25 }, // Centro
+    { wch: 38 }, // Tipo
+    { wch: 15 }, // Subtipo
+    { wch: 20 }, // Folio
+    { wch: 18 }, // Calibración
+    { wch: 18 }, // Dictamen
+    { wch: 20 }, // Vencimiento
+    { wch: 15 }, // Días vencido
+    { wch: 60 }, // PDF
+  ];
+
+  // Congelar encabezado
+  ws["!freeze"] = {
+    xSplit: 0,
+    ySplit: 1,
+  };
+
+  // Filtro
+  ws["!autofilter"] = {
+    ref: XLSX.utils.encode_range(rango),
+  };
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    "Calibraciones Vencidas"
+  );
+
+  // =====================================================
+  // NOMBRE DEL ARCHIVO
+  // =====================================================
+
+  const fechaActual = dayjs().format("YYYY-MM-DD");
+
+  const fileName = `Calibraciones_Vencidas_${fechaActual}.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+};
+const descargarReporteFaltantes = () => {
+
+  const faltantes = obtenerFaltantes();
+
+  if (!faltantes.length) {
+
+    Swal.fire({
+
+      icon: "success",
+
+      title: "Excelente",
+
+      text: "No existen calibraciones faltantes."
+
+    });
+
+    return;
+
+  }
+
+  //---------------------------------
+
+  // Hoja detalle
+
+  //---------------------------------
+
+  const detalle = faltantes.map(f => ({
+
+    Centro: f.centro,
+
+    Línea: f.linea,
+
+    Tipo: f.tipo,
+
+    Subtipo: f.subtipo,
+
+    Estado: "FALTANTE"
+
+  }));
+
+  //---------------------------------
+
+  // Hoja resumen
+
+  //---------------------------------
+
+  const resumenMap = {};
+
+  faltantes.forEach(f => {
+
+    if (!resumenMap[f.centro]) {
+
+      resumenMap[f.centro] = 0;
+
+    }
+
+    resumenMap[f.centro]++;
+
+  });
+
+  const resumen = Object.keys(resumenMap).map(c => ({
+
+    Centro: c,
+
+    "Total faltantes": resumenMap[c]
+
+  }));
+
+  //---------------------------------
+
+  const wb = XLSX.utils.book_new();
+
+  //---------------------------------
+
+  const wsDetalle = XLSX.utils.json_to_sheet(detalle);
+
+  wsDetalle["!cols"] = [
+
+    { wch: 30 },
+
+    { wch: 10 },
+
+    { wch: 35 },
+
+    { wch: 35 },
+
+    { wch: 15 }
+
+  ];
+
+  wsDetalle["!autofilter"] = {
+
+    ref: "A1:E1"
+
+  };
+
+  //---------------------------------
+
+  const wsResumen = XLSX.utils.json_to_sheet(resumen);
+
+  wsResumen["!cols"] = [
+
+    { wch: 35 },
+
+    { wch: 20 }
+
+  ];
+
+  //---------------------------------
+
+  XLSX.utils.book_append_sheet(
+
+    wb,
+
+    wsResumen,
+
+    "Resumen"
+
+  );
+
+  XLSX.utils.book_append_sheet(
+
+    wb,
+
+    wsDetalle,
+
+    "Detalle"
+
+  );
+
+  //---------------------------------
+
+  const pintarEncabezado = (ws, columnas) => {
+
+    columnas.forEach(c => {
+
+      if (!ws[c]) return;
+
+      ws[c].s = {
+
+        font: {
+
+          bold: true,
+
+          color: {
+
+            rgb: "FFFFFF"
+
+          }
+
+        },
+
+        fill: {
+
+          fgColor: {
+
+            rgb: "1565C0"
+
+          }
+
+        },
+
+        alignment: {
+
+          horizontal: "center",
+
+          vertical: "center"
+
+        },
+
+        border: {
+
+          top: { style: "thin" },
+
+          bottom: { style: "thin" },
+
+          left: { style: "thin" },
+
+          right: { style: "thin" }
+
+        }
+
+      };
+
+    });
+
+  };
+
+  pintarEncabezado(
+
+    wsDetalle,
+
+    ["A1", "B1", "C1", "D1", "E1"]
+
+  );
+
+  pintarEncabezado(
+
+    wsResumen,
+
+    ["A1", "B1"]
+
+  );
+
+  //---------------------------------
+
+  XLSX.writeFile(
+
+    wb,
+
+    `Reporte_Faltantes_${dayjs().format("YYYY-MM-DD")}.xlsx`
+
+  );
+
 };
 
 onMounted(() => {

@@ -81,7 +81,25 @@
           Generar arqueos
         </button>
       </div>
+      <div class="row mb-3">
 
+        <div class="col-md-3">
+          <label class="form-label">
+            Hora mínima
+          </label>
+
+          <input type="time" class="form-control" v-model="horaMinima" />
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">
+            Hora máxima
+          </label>
+
+          <input type="time" class="form-control" v-model="horaMaxima" />
+        </div>
+
+      </div>
       <div v-if="arqueosGenerados.length > 0" class="arqueos-list mt-3">
         <h5>Arqueos generados</h5>
 
@@ -98,7 +116,7 @@
             </div>
             <div class="arqueo-actions">
               <button class="btn btn-success btn-sm" @click="enviarWhatsApp(a.mensaje)">
-                📲 Enviar WhatsApp
+                Enviar WhatsApp
               </button>
             </div>
           </div>
@@ -127,7 +145,8 @@
     <!-- Selector de centro -->
     <select v-model="centroSeleccionado" class="form-select mb-4">
       <option disabled value="">Selecciona un centro</option>
-      <option v-for="(centro, id) in centros" :key="id" :value="id">
+
+      <option v-for="centro in centros" :key="centro.id" :value="centro.id">
         {{ centro.ubicacion }}
       </option>
     </select>
@@ -295,14 +314,22 @@ async function cargarReportesCentro() {
     collection(db, "reportes"),
     where("centroId", "==", centroSeleccionado.value)
   );
+
   const snapshot = await getDocs(q);
 
+
+
+  snapshot.docs.forEach(doc => {
+  });
   const datos = snapshot.docs.map((doc) => doc.data());
+
 
   const filtrados = datos.filter((r) => {
     const fecha = dayjs(r.fecha);
-    return fecha.isSameOrAfter(inicio, "day") && fecha.isSameOrBefore(fin, "day");
+    return fecha.isSameOrAfter(inicio, "day") &&
+      fecha.isSameOrBefore(fin, "day");
   });
+
 
   const registros = [];
   filtrados.forEach((r) => {
@@ -322,6 +349,7 @@ async function cargarReportesCentro() {
   const labels = [
     ...new Set(registros.map((r) => dayjs(r.fecha).format("YYYY-MM-DD"))),
   ].sort();
+
 
   const series = {
     Baja: labels.map((f) => {
@@ -371,9 +399,15 @@ async function cargarReportesCentro() {
     ],
   };
 }
+const horaMinima = ref("09:30");
+const horaMaxima = ref("19:00");
 const cantidadArqueos = ref(1);
 
 const arqueosGenerados = ref([]);
+function horaAMinutos(hora) {
+  const [h, m] = hora.split(":").map(Number);
+  return h * 60 + m;
+}
 const iniciarGeneracion = async () => {
 
   try {
@@ -381,9 +415,6 @@ const iniciarGeneracion = async () => {
     // Si NO hay token -> login
     if (!window.googleTokenReady) {
 
-      console.log(
-        "Iniciando autenticación Google..."
-      );
 
       const ok = await window.googleLogin();
 
@@ -396,10 +427,6 @@ const iniciarGeneracion = async () => {
         return;
       }
     }
-
-    console.log(
-      "Token detectado, generando arqueos..."
-    );
 
     await generarArqueos();
 
@@ -476,10 +503,6 @@ async function crearEventoArqueo(arqueo) {
       },
     };
 
-    console.log(
-      "TOKEN:",
-      gapi.client.getToken()
-    );
 
     const res =
       await gapi.client.calendar.events.insert({
@@ -489,10 +512,6 @@ async function crearEventoArqueo(arqueo) {
         resource: evento,
       });
 
-    console.log(
-      "Evento creado:",
-      res.result.htmlLink
-    );
 
   } catch (err) {
 
@@ -517,9 +536,12 @@ const generarArqueos = async () => {
       return;
     }
 
-    const minInicio = 9 * 60 + 30;
-
-    const maxFin = 19 * 60;
+    const minInicio = horaAMinutos(horaMinima.value);
+    const maxFin = horaAMinutos(horaMaxima.value);
+    if (maxFin <= minInicio) {
+      alert("La hora máxima debe ser mayor que la mínima.");
+      return;
+    }
 
     const mensajes = [];
 
@@ -588,11 +610,6 @@ const generarArqueos = async () => {
 
         mensajes.push(arqueo);
 
-        console.log(
-          "Creando evento:",
-          arqueo.centro,
-          arqueo.horario
-        );
 
         await crearEventoArqueo(arqueo);
       }
@@ -600,9 +617,6 @@ const generarArqueos = async () => {
 
     arqueosGenerados.value = mensajes;
 
-    console.log(
-      "Arqueos generados correctamente"
-    );
 
   } catch (err) {
 
@@ -637,6 +651,7 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 2rem;
 }
+
 .grid-stats {
   display: grid;
   margin: 3%;
@@ -674,15 +689,19 @@ onMounted(async () => {
 .stat-card.primary {
   border-top-color: #0d6efd;
 }
+
 .stat-card.success {
   border-top-color: #198754;
 }
+
 .stat-card.warning {
   border-top-color: #ffc107;
 }
+
 .stat-card.danger {
   border-top-color: #dc3545;
 }
+
 .quick-actions {
   display: grid;
   margin: 3%;
@@ -712,6 +731,7 @@ onMounted(async () => {
   margin-bottom: 0.5rem;
   display: block;
 }
+
 /* Título de sección */
 .section-title {
   font-weight: 600;
@@ -760,6 +780,7 @@ onMounted(async () => {
 .border-secondary-subtle {
   border-color: #e9ecef !important;
 }
+
 /* ================= UPCOMING EVENTS ================= */
 .upcoming-card {
   background: #fff;
@@ -838,8 +859,10 @@ onMounted(async () => {
   color: #6c757d;
   padding: 15px;
 }
+
 .arqueos-scroll {
-  max-height: 300px; /* 👈 scroll interno */
+  max-height: 300px;
+  /* 👈 scroll interno */
   overflow-y: auto;
   padding-right: 8px;
 }

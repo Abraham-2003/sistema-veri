@@ -17,28 +17,17 @@
             <label class="form-label small text-muted">Tipo</label>
             <select v-model="nuevo.tipo" class="form-select mb-3" required>
               <option disabled value="">Selecciona un tipo</option>
-              <option
-                v-for="(config, nombre) in calibraciones"
-                :key="nombre"
-                :value="nombre"
-              >
+              <option v-for="(config, nombre) in calibraciones" :key="nombre" :value="nombre">
                 {{ nombre }}
               </option>
             </select>
 
             <!-- Subtipo -->
-            <div
-              v-if="nuevo.tipo && calibraciones[nuevo.tipo]?.subtipos?.length"
-              class="mb-3"
-            >
+            <div v-if="nuevo.tipo && calibraciones[nuevo.tipo]?.subtipos?.length" class="mb-3">
               <label class="form-label small text-muted">Subtipo</label>
               <select v-model="nuevo.subtipo" class="form-select" required>
                 <option disabled value="">Selecciona una opción</option>
-                <option
-                  v-for="sub in calibraciones[nuevo.tipo].subtipos"
-                  :key="sub"
-                  :value="sub"
-                >
+                <option v-for="sub in calibraciones[nuevo.tipo].subtipos" :key="sub" :value="sub">
                   {{ sub }}
                 </option>
               </select>
@@ -46,10 +35,7 @@
 
             <!-- Selección de línea -->
             <!-- Selección de línea si aplica a todas las líneas -->
-            <div
-              v-if="nuevo.tipo && calibraciones[nuevo.tipo]?.aplica === 'todasLineas'"
-              class="mb-3"
-            >
+            <div v-if="nuevo.tipo && calibraciones[nuevo.tipo]?.aplica === 'todasLineas'" class="mb-3">
               <label class="form-label small text-muted">Selecciona línea</label>
               <select v-model="nuevo.linea" class="form-select" required>
                 <option disabled value="">Selecciona una línea</option>
@@ -60,10 +46,7 @@
             </div>
 
             <!-- Línea dual -->
-            <div
-              v-if="nuevo.tipo && calibraciones[nuevo.tipo]?.aplica === 'lineaDual'"
-              class="alert alert-warning"
-            >
+            <div v-if="nuevo.tipo && calibraciones[nuevo.tipo]?.aplica === 'lineaDual'" class="alert alert-warning">
               <strong>Este reporte aplica únicamente a la línea dual:</strong>
               Línea {{ centro?.lineaDual }}
             </div>
@@ -73,38 +56,23 @@
             <input v-model="nuevo.folio" class="form-control mb-2" required />
 
             <label class="form-label small text-muted">Fecha de dictamen</label>
-            <input
-              v-model="nuevo.dictamen"
-              type="date"
-              class="form-control mb-3"
-              required
-            />
-             <label class="form-label small text-muted">Fecha de calibración</label>
-            <input
-              v-model="nuevo.calibracion"
-              type="date"
-              class="form-control mb-3"
-              required
-            />
+            <input v-model="nuevo.dictamen" type="date" class="form-control mb-3" required />
+            <label class="form-label small text-muted">Fecha de calibración</label>
+            <input v-model="nuevo.calibracion" type="date" class="form-control mb-3" required />
 
             <label class="form-label small text-muted">Fecha de vencimiento</label>
-            <input
-              v-model="nuevo.vencimiento"
-              type="date"
-              class="form-control mb-2"
-              required
-            />
+            <input v-model="nuevo.vencimiento" type="date" class="form-control mb-2" required />
             <label class="form-label small text-muted">Archivo PDF</label>
-            <input
-              type="file"
-              accept="application/pdf"
-              class="form-control mb-3"
-              @change="onFileChange"
-            />
+            <input ref="pdfInput" type="file" accept="application/pdf" class="form-control mb-3" @change="onFileChange"
+              required />
           </div>
 
           <div class="modal-footer">
-            <button type="submit" class="btn btn-success w-100">Guardar</button>
+            <button type="submit" class="btn btn-success w-100" :disabled="guardandoReporte">
+              <span v-if="guardandoReporte" class="spinner-border spinner-border-sm me-2"></span>
+
+              {{ guardandoReporte ? "Guardando..." : "Guardar" }}
+            </button>
           </div>
         </form>
       </div>
@@ -140,21 +108,14 @@
             <td>
               <!-- Si ya tiene PDF -->
               <template v-if="reporte.pdfUrl">
-                <a
-                  :href="reporte.pdfUrl"
-                  target="_blank"
-                  class="btn btn-sm btn-outline-success"
-                >
+                <a :href="reporte.pdfUrl" target="_blank" class="btn btn-sm btn-outline-success">
                   Ver PDF
                 </a>
               </template>
 
               <!-- Si no tiene PDF -->
               <template v-else>
-                <button
-                  class="btn btn-sm btn-outline-primary"
-                  @click="abrirModalPdf(reporte)"
-                >
+                <button class="btn btn-sm btn-outline-primary" @click="abrirModalPdf(reporte)">
                   Subir PDF
                 </button>
               </template>
@@ -166,11 +127,7 @@
 
     <!-- Vista móvil -->
     <div class="d-md-none">
-      <div
-        v-for="reporte in reportesPaginados"
-        :key="reporte.id"
-        class="border rounded-3 shadow-sm mb-3 p-3"
-      >
+      <div v-for="reporte in reportesPaginados" :key="reporte.id" class="border rounded-3 shadow-sm mb-3 p-3">
         <div class="d-flex justify-content-between mb-2">
           <span class="text-muted small">Tipo</span>
           <span class="fw-semibold text-dark">{{ reporte.tipo }}</span>
@@ -211,12 +168,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <input
-              type="file"
-              accept="application/pdf"
-              class="form-control"
-              @change="onPdfChange"
-            />
+            <input type="file" accept="application/pdf" class="form-control" @change="onPdfChange" />
           </div>
           <div class="modal-footer">
             <button type="submit" class="btn btn-success">Guardar PDF</button>
@@ -245,26 +197,49 @@
 <script setup>
 import { ref, onMounted, computed, reactive } from "vue";
 import { db } from "../../servivces/auth.js";
-import { collection, addDoc, getDocs, query, orderBy, where, doc, updateDoc  } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+
 import {
   getStorage,
   ref as storageRef,
   uploadBytes,
   getDownloadURL,
+  deleteObject,
 } from "firebase/storage";
 import bootstrap from "bootstrap/dist/js/bootstrap.bundle.min.js";
 import dayjs from "dayjs";
 import { watch } from "vue";
 import Swal from "sweetalert2";
-const formatoFecha = (fecha) => {
-  return dayjs(fecha).format("DD/MM/YYYY");
-};
+function formatoFecha(fecha) {
+  if (!fecha) {
+    return "Sin fecha";
+  }
+
+  const f = dayjs(fecha);
+
+  return f.isValid()
+    ? f.format("DD/MM/YYYY")
+    : "Sin fecha";
+}
 
 const user = JSON.parse(localStorage.getItem("user"));
 const centroId = user?.centroId || "sin-centro";
 const reporteSeleccionado = ref(null);
 const pdfFile = ref(null);
 const centro = ref(null);
+const guardandoPdf = ref(false);
+const guardandoReporte = ref(false);
+const pdfInput = ref(null);
 
 const cargarCentro = async () => {
   if (!centroId) return;
@@ -275,7 +250,15 @@ const cargarCentro = async () => {
 function abrirModalPdf(reporte) {
   reporteSeleccionado.value = reporte;
   pdfFile.value = null;
-  const modal = new bootstrap.Modal(document.getElementById("modalPdf"));
+
+  if (pdfInput.value) {
+    pdfInput.value.value = "";
+  }
+
+  const modal = new bootstrap.Modal(
+    document.getElementById("modalPdf")
+  );
+
   modal.show();
 }
 
@@ -321,12 +304,22 @@ const calibraciones = {
     frecuencia: { meses: 6 },
     subtipos: ["Celda de carga", "Rodillo, brazo y palanca", "Parásitas", "Dinamómetro"],
   },
+  "DINAMOMETROS MENSUALES": {
+    aplica: "todasLineas",
+    frecuencia: { meses: 1 },
+    subtipos: ["KEYTRONIS SA DE CV", "SDE (SISTEMA DE DIAGNOSTICO Y EVALUCION)"],
+  },
   TACOMETROS: {
-    aplica: "centro",
+    aplica: "todasLineas",
     frecuencia: { años: 1 },
     subtipos: ["Pinza", "Batería", "No. Contacto"],
   },
-  "ESTACIÓN METEOROLÓGICA": {
+  "ESTACIÓN METEOROLÓGICA 1": {
+    aplica: "centro",
+    frecuencia: { años: 1 },
+    subtipos: ["Humedad", "Presión", "Temperatura"],
+  },
+  "ESTACIÓN METEOROLÓGICA 2": {
     aplica: "centro",
     frecuencia: { años: 1 },
     subtipos: ["Humedad", "Presión", "Temperatura"],
@@ -336,17 +329,27 @@ const calibraciones = {
     frecuencia: { años: 1 },
     subtipos: ["Termocopla", "Lector óptico"],
   },
-  MANTENIMIENTO: {
+  "MANOMETROS LINEAS": {
     aplica: "todasLineas",
-    frecuencia: { meses: 1 },
-    subtipos: ["Cambio mangueras", "Cambio de filtros", "Limpieza gabinetes"],
+    frecuencia: { años: 1 },
+    subtipos: ["Cero", "Media", "Baja"],
   },
-  DINAMICAS: {
-    aplica: "todasLineas",
-    frecuencia: { meses: 1 }, //se revisa
+  "MANOMETRO COMPRESOR": {
+    aplica: "centro",
+    frecuencia: { años: 1 },
     subtipos: [],
   },
-  MANOMETROS: {
+  "MANOMETROS CUARTO DE GASES (PRESION EN LINEA)": {
+    aplica: "centro",
+    frecuencia: { años: 1 },
+    subtipos: ["Cero", "Media", "Baja"],
+  },
+  "MANOMETROS CUARTO DE GASES (PRESION EN TANQUE)": {
+    aplica: "centro",
+    frecuencia: { años: 1 },
+    subtipos: ["Cero", "Media", "Baja"],
+  },
+  "VALVULA DE ALIVIO (COMPRESOR)": {
     aplica: "centro",
     frecuencia: { años: 1 },
     subtipos: [],
@@ -364,7 +367,12 @@ const calibraciones = {
 };
 
 const guardarReporteLab = async () => {
+  if (guardandoReporte.value) return;
+
+  guardandoReporte.value = true;
+
   const config = calibraciones[nuevo.value.tipo];
+
   const reporte = {
     tipo: nuevo.value.tipo,
     subtipo: nuevo.value.subtipo,
@@ -378,33 +386,128 @@ const guardarReporteLab = async () => {
   if (config?.aplica === "todasLineas") {
     reporte.linea = nuevo.value.linea;
   }
+
   if (config?.aplica === "lineaDual") {
     reporte.linea = centro.value.lineaDual;
   }
+
   if (config?.aplica === "centro") {
-    reporte.linea = null; // no aplica línea
+    reporte.linea = null;
   }
 
   try {
+    // ==========================
+    // BUSCAR REGISTRO EXISTENTE
+    // ==========================
+
+    const q = query(
+      collection(db, "ReporteLab"),
+      where("centroId", "==", centroId),
+      where("tipo", "==", reporte.tipo),
+      where("subtipo", "==", reporte.subtipo),
+      where("linea", "==", reporte.linea)
+    );
+
+    const existenteSnap = await getDocs(q);
+
+    if (!existenteSnap.empty) {
+      const respuesta = await Swal.fire({
+        icon: "warning",
+        title: "Calibración existente",
+        html: `
+          Ya existe una calibración para:
+          <br><br>
+          <b>${reporte.tipo}</b> /
+          <b>${reporte.subtipo}</b>
+          <br>
+          Línea: <b>${reporte.linea ?? "N/A"}</b>
+          <br><br>
+          ¿Deseas reemplazarla?
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Sí, reemplazar",
+        cancelButtonText: "Cancelar",
+        reverseButtons: true,
+      });
+
+      if (!respuesta.isConfirmed) {
+        return;
+      }
+
+      const anteriorDoc = existenteSnap.docs[0];
+      const anteriorData = anteriorDoc.data();
+
+      // ==========================
+      // ELIMINAR PDF ANTERIOR
+      // ==========================
+
+      if (anteriorData.pdfPath) {
+        try {
+          const storage = getStorage();
+
+          const archivoAnteriorRef = storageRef(
+            storage,
+            anteriorData.pdfPath
+          );
+
+          await deleteObject(archivoAnteriorRef);
+
+          console.log("PDF anterior eliminado");
+        } catch (error) {
+          console.warn(
+            "No se pudo eliminar el PDF anterior",
+            error
+          );
+        }
+      }
+
+      // ==========================
+      // ELIMINAR DOCUMENTO ANTERIOR
+      // ==========================
+
+      await deleteDoc(
+        doc(db, "ReporteLab", anteriorDoc.id)
+      );
+    }
+
+    // ==========================
+    // SUBIR NUEVO PDF
+    // ==========================
+
     let pdfUrl = null;
+    let pdfPath = null;
+
     if (nuevo.value.pdfFile) {
       const storage = getStorage();
+
       const refPdf = storageRef(
         storage,
-        `reportesLaboratorio/${nuevo.value.folio}-${Date.now()}-${
-          nuevo.value.pdfFile.name
-        }`
+        `reportesLaboratorio/${nuevo.value.folio}-${Date.now()}-${nuevo.value.pdfFile.name}`
       );
+
       await uploadBytes(refPdf, nuevo.value.pdfFile);
+
       pdfUrl = await getDownloadURL(refPdf);
+
+      pdfPath = refPdf.fullPath;
     }
+
+    // ==========================
+    // GUARDAR NUEVO REGISTRO
+    // ==========================
 
     await addDoc(collection(db, "ReporteLab"), {
       ...reporte,
-      pdfUrl, //  guardamos la URL del PDF
+      pdfUrl,
+      pdfPath,
     });
 
-    // limpiar
+    Swal.fire({
+      icon: "success",
+      title: "Guardado",
+      text: "La calibración fue guardada correctamente.",
+    });
+
     nuevo.value = {
       tipo: "",
       subtipo: "",
@@ -413,34 +516,53 @@ const guardarReporteLab = async () => {
       calibracion: "",
       vencimiento: "",
       linea: "",
-      pdfFile: null, //  limpiar también el archivo
+      pdfFile: null,
     };
 
-    bootstrap.Modal.getInstance(document.getElementById("modalLab")).hide();
+    pdfFile.value = null;
+
+    if (pdfInput.value) {
+      pdfInput.value.value = "";
+    }
+    bootstrap.Modal.getInstance(
+      document.getElementById("modalLab")
+    ).hide();
+
     cargarReportesLab();
+
   } catch (error) {
-    console.error("[Error al guardar reporte de laboratorio]", error);
+    console.error(
+      "[Error al guardar reporte de laboratorio]",
+      error
+    );
+
     Swal.fire({
       icon: "error",
       title: "Error",
       text: "No se pudo guardar el reporte de laboratorio.",
     });
+  } finally {
+    guardandoReporte.value = false;
   }
 };
+
 function onPdfChange(e) {
   const file = e.target.files[0];
+
   if (file && file.type === "application/pdf") {
     pdfFile.value = file;
   } else {
+    pdfFile.value = null;
+
     Swal.fire({
       icon: "error",
       title: "Archivo inválido",
       text: "Solo se permiten archivos PDF.",
     });
+
     e.target.value = "";
   }
 }
-
 async function guardarPdf() {
   if (!pdfFile.value || !reporteSeleccionado.value) return;
 
@@ -448,15 +570,17 @@ async function guardarPdf() {
     const storage = getStorage();
     const refPdf = storageRef(
       storage,
-      `reportesLaboratorio/${reporteSeleccionado.value.folio}-${Date.now()}-${
-        pdfFile.value.name
+      `reportesLaboratorio/${reporteSeleccionado.value.folio}-${Date.now()}-${pdfFile.value.name
       }`
     );
     await uploadBytes(refPdf, pdfFile.value);
     const pdfUrl = await getDownloadURL(refPdf);
 
     const reporteRef = doc(db, "ReporteLab", reporteSeleccionado.value.id);
-    await updateDoc(reporteRef, { pdfUrl });
+    await updateDoc(reporteRef, {
+      pdfUrl,
+      pdfPath: refPdf.fullPath,
+    });
 
     Swal.fire({
       icon: "success",
@@ -464,7 +588,15 @@ async function guardarPdf() {
       text: "El archivo PDF fue agregado correctamente.",
     });
 
-    bootstrap.Modal.getInstance(document.getElementById("modalPdf")).hide();
+    bootstrap.Modal.getInstance(
+      document.getElementById("modalPdf")
+    ).hide();
+
+    pdfFile.value = null;
+
+    if (pdfInput.value) {
+      pdfInput.value.value = "";
+    }
     cargarReportesLab(); // refresca la tabla
   } catch (error) {
     console.error("[Error al guardar PDF]", error);

@@ -5,8 +5,6 @@
       <h3 class="fw-semibold mb-0">Reportes Laboratorios</h3>
     </div>
 
-    
-
     <!-- Tabla -->
     <div class="table-responsive">
       <table class="table infra-table">
@@ -20,7 +18,7 @@
             <th>Fecha de calibracion</th>
             <th>Vencimiento</th>
             <th class="d-none d-md-table-cell">Centro</th>
-            <th>Acciones</th>
+            <th class="text-end">Acciones</th>
           </tr>
         </thead>
 
@@ -54,7 +52,8 @@
             <td class="text-muted small">
               {{ formatoFecha(reporte.dictamen) }}
             </td>
-            <td class="text-muted small">
+
+             <td class="text-muted small">
               {{ formatoFecha(reporte.calibracion) }}
             </td>
 
@@ -67,7 +66,8 @@
             <td class="d-none d-md-table-cell">
               {{ nombreCentro(reporte.centroId) }}
             </td>
-             <td class="text-end">
+
+            <td class="text-end">
               <div class="action-buttons">
                 <!-- Botón Ver PDF solo si existe -->
                 <template v-if="reporte.pdfUrl">
@@ -80,9 +80,6 @@
                     <i class="bi bi-file-earmark-pdf"></i>
                   </a>
                 </template>
-
-                <!-- Botones de edición y eliminación -->
-                
               </div>
             </td>
           </tr>
@@ -107,75 +104,6 @@
       </ul>
     </nav>
 
-    <!-- Modal edición -->
-    <div
-      class="modal fade"
-      id="modalEdicion"
-      tabindex="-1"
-      aria-labelledby="modalEdicionLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="modalEdicionLabel">Editar reporte</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Cerrar"
-            ></button>
-          </div>
-
-          <div class="modal-body">
-            <div class="mb-2">
-              <label class="form-label small">Tipo</label>
-              <input
-                v-model="reporteEditado.tipo"
-                type="text"
-                class="form-control form-control-sm"
-              />
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label small">Folio</label>
-              <input
-                v-model="reporteEditado.folio"
-                type="text"
-                class="form-control form-control-sm"
-              />
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label small">Dictamen</label>
-              <input
-                v-model="reporteEditado.dictamen"
-                type="date"
-                class="form-control form-control-sm"
-              />
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label small">Vencimiento</label>
-              <input
-                v-model="reporteEditado.vencimiento"
-                type="date"
-                class="form-control form-control-sm"
-              />
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
-              Cancelar
-            </button>
-            <button class="btn btn-success btn-sm" @click="guardarCambiosReporte">
-              Guardar cambios
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 <script setup>
@@ -268,10 +196,15 @@ const nombreCentro = (id) => {
   return centro ? centro.ubicacion : "Desconocido";
 };
 const estadoVencimiento = (fecha) => {
+  if (!fecha) return "ok";
+
   const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0); // 👈 normalizamos
+  hoy.setHours(0, 0, 0, 0);
 
   const vencimiento = parseFechaLocal(fecha);
+
+  if (!vencimiento) return "ok";
+
   vencimiento.setHours(0, 0, 0, 0);
 
   const diffDias = Math.ceil(
@@ -280,9 +213,9 @@ const estadoVencimiento = (fecha) => {
 
   if (diffDias < 0) return "vencido";
   if (diffDias <= 30) return "proximo";
+
   return "ok";
 };
-
 
 const reportesFiltrados = computed(() => {
   return reportesLab.value.filter((r) => r.centroId === centroId);
@@ -297,15 +230,24 @@ const totalPaginas = computed(() => {
   return Math.ceil(reportesFiltrados.value.length / porPagina);
 });
 const parseFechaLocal = (fechaStr) => {
+  if (!fechaStr || typeof fechaStr !== "string") {
+    return null;
+  }
+
   const [year, month, day] = fechaStr.split("-").map(Number);
-  return new Date(year, month - 1, day); 
+
+  return new Date(year, month - 1, day);
 };
 
 const formatoFecha = (fecha) => {
-  return parseFechaLocal(fecha).toLocaleDateString("es-MX");
+  const fechaParseada = parseFechaLocal(fecha);
+
+  if (!fechaParseada) {
+    return "Sin fecha";
+  }
+
+  return fechaParseada.toLocaleDateString("es-MX");
 };
-
-
 
 onMounted(() => {
   cargarReportesLab();

@@ -20,6 +20,15 @@
         <div class="card-body">
           <h6 class="card-title">{{ activeTab }} - En uso</h6>
 
+          <!-- Aviso si hubo un cambio de tanque fuera de horario, aún no reflejado en un reporte -->
+          <div v-if="props.cambiosPendientes[activeTab]" class="alert alert-info py-2 small">
+            Se registró un cambio de tanque el {{ formatoFecha(props.cambiosPendientes[activeTab].fecha) }}
+            ({{ props.cambiosPendientes[activeTab].turno }}), realizado por
+            <b>{{ props.cambiosPendientes[activeTab].realizadoPor || 'sin nombre registrado' }}</b>
+            — nueva serie: <b>{{ props.cambiosPendientes[activeTab].serieNueva }}</b>.
+            Ya se marcó como reemplazo en este reporte.
+          </div>
+
           <div
             v-for="(gas, index) in gasesUso[activeTab]"
             :key="`uso-${activeTab}-${index}`"
@@ -32,9 +41,40 @@
               <input v-model="gas.serie" class="form-control" />
             </div>
 
-            <div class="mb-2">
+            <!-- FALLA DE MANÓMETRO -->
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                v-model="gas.falloManometro"
+                :id="`falla-${activeTab}`"
+              />
+              <label class="form-check-label" :for="`falla-${activeTab}`">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                Falla de manómetro (la lectura de psi no es confiable)
+              </label>
+            </div>
+
+            <div v-if="!gas.falloManometro" class="mb-2">
               <label class="form-label">PSI</label>
               <input v-model.number="gas.psi" type="number" class="form-control" />
+              <div v-if="baseline[activeTab]" class="form-text">
+                Reporte anterior: {{ baseline[activeTab].psi ?? 'sin dato' }} psi
+                <span v-if="baseline[activeTab].serie">(serie {{ baseline[activeTab].serie }})</span>
+              </div>
+            </div>
+
+            <div v-else class="mb-2">
+              <label class="form-label">Número de reporte</label>
+              <input
+                v-model="gas.numeroReporteFalla"
+                class="form-control"
+                placeholder="Folio del reporte de falla del manómetro"
+              />
+              <div class="form-text">
+                Como el manómetro puede marcar una cantidad que no es real, anota aquí el número de
+                reporte en lugar del psi.
+              </div>
             </div>
 
             <!-- REEMPLAZO -->
@@ -43,15 +83,27 @@
                 class="form-check-input"
                 type="checkbox"
                 v-model="gas.reemplazo"
+                @change="onReemplazoToggle(activeTab)"
                 :id="`reemplazo-${activeTab}`"
               />
-              <label class="form-check-label text-danger fw-semibold">
+              <label class="form-check-label text-danger fw-semibold" :for="`reemplazo-${activeTab}`">
                 Reemplazo de gas
               </label>
             </div>
 
-            <div v-if="gas.reemplazo" class="alert alert-warning py-2 small">
-              Marca esto solo si el tanque fue cambiado físicamente.
+            <div v-if="gas.reemplazo" class="alert alert-warning py-2 small mb-2">
+              Marca esto solo si el tanque fue cambiado físicamente. Un tanque de reemplazo normalmente
+              marca 2000 psi o más; si marca menos, el sistema te va a preguntar si quieres continuar.
+            </div>
+
+            <div v-if="gas.reemplazo" class="mb-2">
+              <label class="form-label">Nombre de quien reemplazó el gas</label>
+              <input v-model="gas.reemplazoPor" class="form-control" />
+            </div>
+
+            <div v-if="gas.reemplazo" class="mb-2">
+              <label class="form-label">Fecha y hora del reemplazo</label>
+              <input v-model="gas.reemplazoFechaHora" type="datetime-local" class="form-control" />
             </div>
 
             <div class="mb-2">
@@ -101,7 +153,6 @@
       </div>
     </div>
     <div class="text-center">
-      <!-- Botón siguiente -->
       <button
         class="btn btn-light border border-secondary-subtle text-secondary fw-semibold px-4 py-2 rounded-pill shadow-sm d-block mx-auto mb-2"
         @click="emitirSiguiente"
@@ -111,33 +162,31 @@
     </div>
   </div>
 </template>
+
 <script setup>
-import { ref, defineProps, defineEmits, onMounted, watch } from "vue";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { ref, computed, watch } from "vue";
+import dayjs from "dayjs";
 import Swal from "sweetalert2";
-import { db } from "../../../servivces/auth.js";
 
 const props = defineProps({
-  modelValue: {
-    type: Object,
-    required: true,
-  },
-  centroId: {
-    type: String,
-    required: true,
-  },
+  modelValue: { type: Object, required: true },
+  centroId: { type: String, required: true },
+  // El padre (ReporteDiario) es quien consulta Firestore; este componente
+  // solo recibe la continuidad ya resuelta.
+  ultimoReporte: { type: Object, default: null },
+  cambiosPendientes: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(["update:modelValue", "siguiente"]);
 
+const REEMPLAZO_MIN_PSI = 2000;
 const tabs = ["Baja", "Media", "Cero"];
 const activeTab = ref("Baja");
-const ultimoReporte = ref(null);
 
 const gasesUso = ref({
-  Baja: [{ tipo: "Baja - Uso", serie: "", psi: null, estatus: "", reemplazo: false }],
-  Media: [{ tipo: "Media - Uso", serie: "", psi: null, estatus: "", reemplazo: false }],
-  Cero: [{ tipo: "Cero - Uso", serie: "", psi: null, estatus: "", reemplazo: false }],
+  Baja: [{ tipo: "Baja - Uso", serie: "", psi: null, estatus: "", reemplazo: false, falloManometro: false, numeroReporteFalla: "", reemplazoPor: "", reemplazoFechaHora: "" }],
+  Media: [{ tipo: "Media - Uso", serie: "", psi: null, estatus: "", reemplazo: false, falloManometro: false, numeroReporteFalla: "", reemplazoPor: "", reemplazoFechaHora: "" }],
+  Cero: [{ tipo: "Cero - Uso", serie: "", psi: null, estatus: "", reemplazo: false, falloManometro: false, numeroReporteFalla: "", reemplazoPor: "", reemplazoFechaHora: "" }],
 });
 
 const gasesStock = ref({
@@ -146,84 +195,135 @@ const gasesStock = ref({
   Cero: [{ tipo: "Cero - Stock", serie: "", psi: null, estatus: "" }],
 });
 
-watch(
-  () => props.centroId,
-  async (centroId) => {
-    if (!centroId) {
-      console.warn("⛔ centroId aún no disponible");
+const formatoFecha = (f) => dayjs(f).format("DD MMM, HH:mm");
+
+// Línea base para prellenar y validar: si el padre trae un cambio de tanque
+// fuera de horario posterior al último reporte, ese manda; si no, el reporte anterior.
+const baseline = computed(() => {
+  const b = {};
+  tabs.forEach((tipo) => {
+    const cambio = props.cambiosPendientes?.[tipo];
+    if (cambio) {
+      b[tipo] = { psi: cambio.psi ?? null, serie: cambio.serieNueva || "", origen: "cambio" };
       return;
     }
+    const anterior = props.ultimoReporte?.gases?.uso?.[tipo]?.[0];
+    b[tipo] = anterior ? { psi: anterior.psi ?? null, serie: anterior.serie || "", origen: "reporte" } : null;
+  });
+  return b;
+});
 
-    const q = query(
-      collection(db, "reportes"),
-      where("centroId", "==", centroId),
-      orderBy("fecha", "desc"),
-      limit(1)
-    );
-
-    const snap = await getDocs(q);
-
-    ultimoReporte.value = snap.empty ? null : snap.docs[0].data();
-    if (ultimoReporte.value?.gases) {
-      const anteriorUso = ultimoReporte.value.gases.uso || {};
-      const anteriorStock = ultimoReporte.value.gases.stock || {};
-
-      tabs.forEach((tipo) => {
-        // Autocompletar EN USO
-        if (anteriorUso[tipo]?.[0]) {
-          gasesUso.value[tipo][0].serie = anteriorUso[tipo][0].serie || "";
-        }
-
-        // Autocompletar EN STOCK
-        if (anteriorStock[tipo]?.[0]) {
-          gasesStock.value[tipo][0].serie = anteriorStock[tipo][0].serie || "";
-        }
-      });
-    }
+watch(
+  () => [props.ultimoReporte, props.cambiosPendientes],
+  () => {
+    const anteriorStock = props.ultimoReporte?.gases?.stock || {};
+    tabs.forEach((tipo) => {
+      const base = baseline.value[tipo];
+      if (base) {
+        gasesUso.value[tipo][0].serie = base.serie || "";
+        if (base.origen === "cambio") gasesUso.value[tipo][0].reemplazo = true;
+      }
+      if (anteriorStock[tipo]?.[0]) {
+        gasesStock.value[tipo][0].serie = anteriorStock[tipo][0].serie || "";
+      }
+    });
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 
 function validarCongruencia() {
-  if (!ultimoReporte.value) return true;
+  if (!props.ultimoReporte) return true;
 
   for (const tipo of tabs) {
     const actual = gasesUso.value[tipo][0];
-    const anterior = ultimoReporte.value?.gases?.uso?.[tipo]?.[0];
+    const base = baseline.value[tipo];
+    if (!base || actual.falloManometro) continue;
 
-    if (!anterior) continue;
+    const mismaSerie = (actual.serie || "").trim() === (base.serie || "").trim();
 
-    if (actual.psi > anterior.psi && !actual.reemplazo) {
+    if (mismaSerie && actual.psi !== null && base.psi !== null && actual.psi > base.psi && !actual.reemplazo) {
       Swal.fire({
-        icon: "error",
-        title: "Registro incongruente",
+        icon: "warning",
+        title: `Gas ${tipo}: la lectura subió sin reemplazo`,
         html: `
-          <b> Gas ${tipo}</b><br>
-          Si hubo cambio de tanque, marca <b>Reemplazo de gas</b>.
+          <div class="text-start">
+            <p>Cantidad anterior: <b>${base.psi} psi</b>${base.serie ? ` (serie ${base.serie})` : ""}.</p>
+            <p>Cantidad capturada ahora: <b>${actual.psi} psi</b>.</p>
+            <p class="mb-0">Si cambiaste el tanque, marca <b>Reemplazo de gas</b>. Si el manómetro está
+            fallando, marca <b>Falla de manómetro</b> y anota el número de reporte.</p>
+          </div>
         `,
       });
       return false;
     }
   }
-
   return true;
+}
+
+async function validarReemplazos() {
+  for (const tipo of tabs) {
+    const actual = gasesUso.value[tipo][0];
+    if (!actual.reemplazo || actual.falloManometro || actual.psi === null) continue;
+    if (actual.psi < REEMPLAZO_MIN_PSI) {
+      const r = await Swal.fire({
+        icon: "warning",
+        title: `Gas ${tipo}: el tanque de reemplazo marca menos de ${REEMPLAZO_MIN_PSI} psi`,
+        html: `Marca <b>${actual.psi} psi</b>. Un tanque nuevo normalmente marca ${REEMPLAZO_MIN_PSI} psi o más.`,
+        showCancelButton: true,
+        confirmButtonText: "Continuar así",
+        cancelButtonText: "Corregir",
+      });
+      if (!r.isConfirmed) return false;
+    }
+  }
+  return true;
+}
+
+function nowForInput() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function onReemplazoToggle(tipo) {
+  const g = gasesUso.value[tipo][0];
+  if (g.reemplazo) {
+    if (!g.reemplazoFechaHora) g.reemplazoFechaHora = nowForInput();
+  } else {
+    g.reemplazoPor = "";
+    g.reemplazoFechaHora = "";
+  }
 }
 
 function validarCampos() {
   return tabs.every((tab) =>
-    gasesUso.value[tab].every((g) => g.serie && g.psi !== null && g.estatus)
+    gasesUso.value[tab].every((g) => {
+      const base = g.serie && g.estatus && (g.falloManometro ? g.numeroReporteFalla?.trim() : g.psi !== null);
+      const datosReemplazo = !g.reemplazo || (g.reemplazoPor?.trim() && g.reemplazoFechaHora);
+      return base && datosReemplazo;
+    })
   );
 }
 
-function emitirSiguiente() {
+async function emitirSiguiente() {
   if (!validarCampos()) {
     Swal.fire("Campos incompletos", "Llena todos los datos", "warning");
     return;
   }
-
   if (!validarCongruencia()) return;
+  if (!(await validarReemplazos())) return;
 
-  emit("update:modelValue", { uso: gasesUso.value, stock: gasesStock.value });
+  // Convierte la fecha/hora del reemplazo (formato del input) a ISO, igual que
+  // el resto de las fechas del reporte.
+  const usoParaGuardar = {};
+  tabs.forEach((tipo) => {
+    usoParaGuardar[tipo] = gasesUso.value[tipo].map((g) => ({
+      ...g,
+      reemplazoFechaHora: g.reemplazo && g.reemplazoFechaHora ? new Date(g.reemplazoFechaHora).toISOString() : "",
+    }));
+  });
+
+  emit("update:modelValue", { uso: usoParaGuardar, stock: gasesStock.value });
   emit("siguiente");
 }
 </script>

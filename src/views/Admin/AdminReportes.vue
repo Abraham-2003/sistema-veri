@@ -2,30 +2,38 @@
   <div class="container py-4">
     <h2 class="titulo">Reportes por Centro</h2>
     <div class="mb-3">
-      <button
-        class="btn btn-primary"
-        :disabled="loadingGeneral"
-        @click="generarReporteGeneral"
-      >
+      <button class="btn btn-success" :disabled="loadingGeneral" @click="generarReporteGeneralGases">
         <span v-if="loadingGeneral" class="spinner-border spinner-border-sm me-2"></span>
 
-        {{ loadingGeneral ? "Generando reporte..." : "Generar reporte general" }}
+        {{ loadingGeneral ? "Generando reporte..." : "Generar reporte general gases" }}
+      </button>
+    </div>
+    <div class="mb-3">
+      <div class="mb-3">
+        <label class="form-label">Fecha inicio</label>
+        <input type="date" v-model="fechaInicioGeneral" class="form-control" />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Fecha fin</label>
+        <input type="date" v-model="fechaFinGeneral" class="form-control" />
+      </div>
+
+      <button class="btn btn-danger" :disabled="loadingGeneralReport" @click="generarReporteGeneral">
+        <span v-if="loadingGeneralReport" class="spinner-border spinner-border-sm me-2"></span>
+
+        {{ loadingGeneralReport
+          ? "Generando reporte..."
+          : "Generar reporte general"
+        }}
       </button>
     </div>
     <div class="grid-centros">
-      <div
-        v-for="centro in centros"
-        :key="centro.id"
-        class="centro-card"
-        :class="centro.estatus === 'Activo' ? 'activo' : 'desactivado'"
-        @click="verReporte(centro.ubicacion)"
-      >
+      <div v-for="centro in centros" :key="centro.id" class="centro-card"
+        :class="centro.estatus === 'Activo' ? 'activo' : 'desactivado'" @click="verReporte(centro.ubicacion)">
         <div class="centro-header">
           <h3>{{ centro.ubicacion }}</h3>
-          <span
-            class="badge"
-            :class="centro.estatus === 'Activo' ? 'badge-verde' : 'badge-rojo'"
-          >
+          <span class="badge" :class="centro.estatus === 'Activo' ? 'badge-verde' : 'badge-rojo'">
             {{ centro.estatus }}
           </span>
         </div>
@@ -38,16 +46,10 @@
         <div v-if="tieneReporteHoy(centro.id)" class="alerta-pendiente">
           Reporte pendiente
         </div>
-        <button
-          class="btn btn-outline-danger btn-sm mt-2 ms-2"
-          @click.stop="descargarReportePDF(centro)"
-        >
+        <button class="btn btn-outline-danger btn-sm mt-2 ms-2" @click.stop="descargarReportePDF(centro)">
           Generar PDF
         </button>
-        <button
-          class="btn btn-outline-success btn-sm mt-2"
-          @click.stop="abrirModalExcel(centro)"
-        >
+        <button class="btn btn-outline-success btn-sm mt-2" @click.stop="abrirModalExcel(centro)">
           Descargar Excel
         </button>
       </div>
@@ -65,20 +67,12 @@
           <div class="modal-body">
             <div class="mb-2">
               <label class="form-label small">Fecha inicio</label>
-              <input
-                type="date"
-                v-model="fechaInicio"
-                class="form-control form-control-sm"
-              />
+              <input type="date" v-model="fechaInicio" class="form-control form-control-sm" />
             </div>
 
             <div class="mb-2">
               <label class="form-label small">Fecha fin</label>
-              <input
-                type="date"
-                v-model="fechaFin"
-                class="form-control form-control-sm"
-              />
+              <input type="date" v-model="fechaFin" class="form-control form-control-sm" />
             </div>
           </div>
 
@@ -87,11 +81,7 @@
               Cancelar
             </button>
 
-            <button
-              class="btn btn-success btn-sm"
-              :disabled="loading"
-              @click="descargarExcel"
-            >
+            <button class="btn btn-success btn-sm" :disabled="loading" @click="descargarExcel">
               <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
               Descargar Excel
             </button>
@@ -121,6 +111,9 @@ const reportesHoy = ref([]);
 const loading = ref(false);
 const centroId = ref("");
 const loadingGeneral = ref(false);
+const loadingGeneralReport = ref(false);
+const fechaInicioGeneral = ref("");
+const fechaFinGeneral = ref("");
 
 const cargarReportesHoy = async () => {
   const hoy = dayjs().format("YYYY-MM-DD");
@@ -187,7 +180,7 @@ const obtenerReportes = async () => {
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
-const generarReporteGeneral = async () => {
+const generarReporteGeneralGases = async () => {
   try {
     loadingGeneral.value = true;
 
@@ -378,13 +371,632 @@ const generarReporteGeneral = async () => {
     loadingGeneral.value = false;
   }
 };
+const generarReporteGeneral = async () => {
+  if (!fechaInicioGeneral.value || !fechaFinGeneral.value) {
+    alert("Selecciona fecha de inicio y fecha de fin");
+    return;
+  }
+
+  if (fechaInicioGeneral.value > fechaFinGeneral.value) {
+    alert("La fecha de inicio no puede ser mayor a la fecha fin");
+    return;
+  }
+
+  try {
+    loadingGeneralReport.value = true;
+
+    const todosLosReportes = [];
+
+    // ======================================================
+    // CONVERTIR LAS FECHAS A RANGO COMPLETO DEL DÍA
+    // ======================================================
+
+    const inicio = dayjs(fechaInicioGeneral.value)
+      .startOf("day")
+      .toISOString();
+
+    const fin = dayjs(fechaFinGeneral.value)
+      .endOf("day")
+      .toISOString();
+
+    console.log("Rango de búsqueda:");
+    console.log("Inicio:", inicio);
+    console.log("Fin:", fin);
+
+    // ======================================================
+    // OBTENER REPORTES DE TODOS LOS CENTROS
+    // ======================================================
+
+    for (const centro of centros.value) {
+
+      const q = query(
+        collection(db, "reportes"),
+
+        where(
+          "centroId",
+          "==",
+          centro.id
+        ),
+
+        where(
+          "fecha",
+          ">=",
+          inicio
+        ),
+
+        where(
+          "fecha",
+          "<=",
+          fin
+        ),
+
+        orderBy(
+          "fecha",
+          "asc"
+        )
+      );
+
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach((doc) => {
+
+        todosLosReportes.push({
+          id: doc.id,
+          ...doc.data(),
+
+          nombreCentro:
+            centro.ubicacion,
+        });
+
+      });
+    }
+
+    // ======================================================
+    // VALIDAR RESULTADOS
+    // ======================================================
+
+    if (todosLosReportes.length === 0) {
+
+      alert(
+        "No hay reportes registrados en el periodo seleccionado."
+      );
+
+      return;
+    }
+
+    // ======================================================
+    // GENERAR EXCEL
+    // ======================================================
+
+    generarExcelGeneral(
+      todosLosReportes,
+      fechaInicioGeneral.value,
+      fechaFinGeneral.value
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Error generando reporte general:",
+      error
+    );
+
+    alert(
+      "Error generando reporte general"
+    );
+
+  } finally {
+
+    loadingGeneralReport.value = false;
+
+  }
+};
+const generarExcelGeneral = (reportes) => {
+  const fileName = `Reporte_General_${dayjs().format(
+    "YYYYMMDD_HHmm"
+  )}.xlsx`;
+
+  const wb = XLSX.utils.book_new();
+
+  // ======================================================
+  // CLASIFICACIÓN DE REPORTES
+  // ======================================================
+
+  const clasificacion = clasificarReportes(reportes);
+
+  const diasSinApertura = detectarDiasSinApertura(
+    reportes,
+    12 * 60
+  );
+
+  // ======================================================
+  // ARRAYS
+  // ======================================================
+
+  const resumen = [];
+  const lineas = [];
+  const calibraciones = [];
+  const gasesStock = [];
+  const gasesUso = [];
+  const imagenes = [];
+
+  // ======================================================
+  // TRANSFORMAR INFORMACIÓN
+  // ======================================================
+
+  reportes.forEach((r) => {
+
+    const infoClasificacion = clasificacion.get(r);
+
+    const fechaHora = obtenerFechaHoraReporte(r);
+
+    const fecha = infoClasificacion?.fecha || "";
+
+    const hora = fechaHora
+      ? obtenerHoraLocal(fechaHora)
+      : "";
+
+    const tipoReporte =
+      infoClasificacion?.tipo || "SIN CLASIFICAR";
+
+    // ====================================================
+    // INFORMACIÓN COMÚN
+    // ====================================================
+
+    const infoReporte = {
+      "Centro": r.nombreCentro || "Sin centro",
+      "Tipo de Reporte": tipoReporte,
+      "Fecha Reporte": fecha,
+      "Hora Reporte": hora,
+    };
+
+    // ====================================================
+    // RESUMEN
+    // ====================================================
+
+    const datosResumen = transformarResumen(r);
+
+    resumen.push({
+      ...infoReporte,
+      ...datosResumen,
+    });
+
+    // ====================================================
+    // LÍNEAS
+    // ====================================================
+
+    const datosLineas = transformarLineas(r);
+
+    datosLineas.forEach((item) => {
+      lineas.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // ====================================================
+    // CALIBRACIONES
+    // ====================================================
+
+    const datosCalibraciones = transformarCalibraciones(r);
+
+    datosCalibraciones.forEach((item) => {
+      calibraciones.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // ====================================================
+    // GASES STOCK
+    // ====================================================
+
+    const datosGasesStock = transformarGases(r, "stock");
+
+    datosGasesStock.forEach((item) => {
+      gasesStock.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // ====================================================
+    // GASES USO
+    // ====================================================
+
+    const datosGasesUso = transformarGases(r, "uso");
+
+    datosGasesUso.forEach((item) => {
+      gasesUso.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // ====================================================
+    // IMÁGENES
+    // ====================================================
+
+    const datosImagenes = transformarImagenes(r);
+
+    datosImagenes.forEach((item) => {
+      imagenes.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+  });
+
+  // ======================================================
+  // FUNCIÓN PARA CREAR HOJAS
+  // ======================================================
+
+  const crearHoja = (datos, nombreHoja) => {
+
+    if (!datos || datos.length === 0) {
+      datos = [
+        {
+          Centro: "Sin información",
+        },
+      ];
+    }
+
+    const ws = XLSX.utils.json_to_sheet(datos);
+
+    const rango = XLSX.utils.decode_range(ws["!ref"]);
+
+    // ====================================================
+    // ENCABEZADOS
+    // ====================================================
+
+    for (let C = rango.s.c; C <= rango.e.c; C++) {
+
+      const celda = ws[
+        XLSX.utils.encode_cell({
+          r: 0,
+          c: C,
+        })
+      ];
+
+      if (!celda) continue;
+
+      celda.s = {
+        font: {
+          bold: true,
+          color: {
+            rgb: "FFFFFF",
+          },
+          sz: 11,
+        },
+
+        fill: {
+          fgColor: {
+            rgb: "1F4E78",
+          },
+        },
+
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+
+        border: {
+          top: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+
+          bottom: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+
+          left: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+
+          right: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+        },
+      };
+    }
+
+    // ====================================================
+    // FILAS
+    // ====================================================
+
+    for (let R = 1; R <= rango.e.r; R++) {
+
+      const celdaTipo = ws[
+        XLSX.utils.encode_cell({
+          r: R,
+          c: 1,
+        })
+      ];
+
+      const tipo = celdaTipo?.v;
+
+      let estiloFila = {
+        alignment: {
+          vertical: "center",
+          wrapText: true,
+        },
+
+        border: {
+          bottom: {
+            style: "thin",
+            color: {
+              rgb: "E6E6E6",
+            },
+          },
+        },
+      };
+
+      // -----------------------------------------------
+      // APERTURA
+      // -----------------------------------------------
+
+      if (tipo === "APERTURA") {
+
+        estiloFila.fill = {
+          fgColor: {
+            rgb: "E2F0D9",
+          },
+        };
+
+        estiloFila.font = {
+          bold: true,
+          color: {
+            rgb: "375623",
+          },
+        };
+      }
+
+      // -----------------------------------------------
+      // CIERRE
+      // -----------------------------------------------
+
+      else if (tipo === "CIERRE") {
+
+        estiloFila.fill = {
+          fgColor: {
+            rgb: "DDEBF7",
+          },
+        };
+
+        estiloFila.font = {
+          bold: true,
+          color: {
+            rgb: "1F4E78",
+          },
+        };
+      }
+
+      // -----------------------------------------------
+      // APERTURA Y CIERRE
+      // -----------------------------------------------
+
+      else if (tipo === "APERTURA Y CIERRE") {
+
+        estiloFila.fill = {
+          fgColor: {
+            rgb: "FFF2CC",
+          },
+        };
+
+        estiloFila.font = {
+          bold: true,
+          color: {
+            rgb: "7F6000",
+          },
+        };
+      }
+
+      // -----------------------------------------------
+      // NORMAL
+      // -----------------------------------------------
+
+      else {
+
+        estiloFila.fill = {
+          fgColor: {
+            rgb: R % 2 === 0
+              ? "F8F9FA"
+              : "FFFFFF",
+          },
+        };
+      }
+
+      // -----------------------------------------------
+      // APLICAR
+      // -----------------------------------------------
+
+      for (let C = rango.s.c; C <= rango.e.c; C++) {
+
+        const celda = ws[
+          XLSX.utils.encode_cell({
+            r: R,
+            c: C,
+          })
+        ];
+
+        if (celda) {
+          celda.s = estiloFila;
+        }
+      }
+    }
+
+    // ====================================================
+    // ANCHOS
+    // ====================================================
+
+    const anchos = [];
+
+    for (let C = rango.s.c; C <= rango.e.c; C++) {
+
+      let maxLength = 10;
+
+      for (let R = rango.s.r; R <= rango.e.r; R++) {
+
+        const celda = ws[
+          XLSX.utils.encode_cell({
+            r: R,
+            c: C,
+          })
+        ];
+
+        if (
+          celda?.v !== undefined &&
+          celda?.v !== null
+        ) {
+
+          const longitud =
+            String(celda.v).length;
+
+          if (longitud > maxLength) {
+            maxLength = longitud;
+          }
+        }
+      }
+
+      anchos.push({
+        wch: Math.min(maxLength + 2, 40),
+      });
+    }
+
+    ws["!cols"] = anchos;
+
+    // ====================================================
+    // CONGELAR ENCABEZADO
+    // ====================================================
+
+    ws["!freeze"] = {
+      xSplit: 0,
+      ySplit: 1,
+    };
+
+    // ====================================================
+    // FILTRO
+    // ====================================================
+
+    ws["!autofilter"] = {
+      ref: XLSX.utils.encode_range(rango),
+    };
+
+    // ====================================================
+    // ALTURA ENCABEZADO
+    // ====================================================
+
+    ws["!rows"] = [
+      {
+        hpt: 30,
+      },
+    ];
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      nombreHoja
+    );
+  };
+
+  // ======================================================
+  // CREAR HOJAS
+  // ======================================================
+
+  crearHoja(resumen, "Resumen");
+
+  crearHoja(
+    lineas,
+    "Líneas"
+  );
+
+  crearHoja(
+    calibraciones,
+    "Calibraciones"
+  );
+
+  crearHoja(
+    gasesStock,
+    "Gases Stock"
+  );
+
+  crearHoja(
+    gasesUso,
+    "Gases Uso"
+  );
+
+  crearHoja(
+    imagenes,
+    "Imágenes"
+  );
+
+  // ======================================================
+  // CONTROL DE APERTURAS
+  // ======================================================
+
+  const controlAperturas = [];
+
+  Object.entries(diasSinApertura).forEach(
+    ([fecha, sinApertura]) => {
+
+      controlAperturas.push({
+        Fecha: fecha,
+
+        "Estado Apertura": sinApertura
+          ? "SIN REPORTE DE APERTURA"
+          : "APERTURA REGISTRADA",
+      });
+    }
+  );
+
+  if (controlAperturas.length > 0) {
+    crearHoja(
+      controlAperturas,
+      "Control Aperturas"
+    );
+  }
+
+  // ======================================================
+  // GENERAR ARCHIVO
+  // ======================================================
+
+  const estado = import.meta.env.VITE_ESTADO;
+
+  XLSX.writeFile(
+    wb,
+    `Reporte_General_${estado}_${dayjs().format(
+      "YYYYMMDD_HHmm"
+    )}.xlsx`
+  );
+};
 const descargarExcel = async () => {
   if (!fechaInicio.value || !fechaFin.value || !centroId.value) {
     alert("Selecciona centro y rango de fechas");
     return;
   }
-  const inicio = dayjs(fechaInicio.value).format("YYYY-MM-DD");
-  const fin = dayjs(fechaFin.value).format("YYYY-MM-DD");
+
+  // Las fechas seleccionadas por el usuario se interpretan
+  // como fechas locales.
+  const inicio = dayjs(fechaInicio.value)
+    .startOf("day")
+    .toISOString();
+
+  const fin = dayjs(fechaFin.value)
+    .endOf("day")
+    .toISOString();
 
   loading.value = true;
 
@@ -393,12 +1005,16 @@ const descargarExcel = async () => {
       collection(db, "reportes"),
       where("centroId", "==", centroId.value),
       where("fecha", ">=", inicio),
-      where("fecha", "<=", `${fin}T23:59:59`),
+      where("fecha", "<=", fin),
       orderBy("fecha", "asc")
     );
 
     const snapshot = await getDocs(q);
-    const reportes = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    const reportes = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
 
     if (!reportes.length) {
       alert("No hay reportes en ese rango");
@@ -407,6 +1023,7 @@ const descargarExcel = async () => {
     }
 
     generarExcel(reportes);
+
   } catch (error) {
     console.error("Error generando Excel", error);
     alert("Error al generar el reporte");
@@ -434,6 +1051,134 @@ const descargarReportePDF = async (centro) => {
     loading.value = false;
   }
 };
+// ======================================================
+// OBTENER FECHA Y HORA DEL REPORTE
+// ======================================================
+
+const obtenerFechaHoraReporte = (reporte) => {
+  if (!reporte.fecha) return null;
+
+  const fecha = new Date(reporte.fecha);
+
+  if (isNaN(fecha.getTime())) {
+    return null;
+  }
+
+  return fecha;
+};
+const obtenerFechaLocal = (fechaHora) => {
+  const anio = fechaHora.getFullYear();
+  const mes = String(fechaHora.getMonth() + 1).padStart(2, "0");
+  const dia = String(fechaHora.getDate()).padStart(2, "0");
+
+  return `${anio}-${mes}-${dia}`;
+};
+const obtenerHoraLocal = (fechaHora) => {
+  return fechaHora.toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
+
+// ======================================================
+// CLASIFICAR APERTURA / CIERRE
+// ======================================================
+
+const clasificarReportes = (reportes) => {
+  const grupos = {};
+
+  reportes.forEach((reporte) => {
+    const fechaHora = obtenerFechaHoraReporte(reporte);
+
+    if (!fechaHora) return;
+
+    const fecha = obtenerFechaLocal(fechaHora);
+
+    if (!grupos[fecha]) {
+      grupos[fecha] = [];
+    }
+
+    grupos[fecha].push({
+      reporte,
+      fechaHora,
+    });
+  });
+
+  const clasificacion = new Map();
+
+  Object.entries(grupos).forEach(([fecha, items]) => {
+
+    // Orden cronológico REAL
+    items.sort((a, b) => {
+      return a.fechaHora.getTime() - b.fechaHora.getTime();
+    });
+
+    const primero = items[0];
+    const ultimo = items[items.length - 1];
+
+    if (items.length === 1) {
+      clasificacion.set(primero.reporte, {
+        tipo: "APERTURA Y CIERRE",
+        fecha,
+        hora: primero.fechaHora,
+      });
+
+      return;
+    }
+
+    // PRIMERO DEL DÍA
+    clasificacion.set(primero.reporte, {
+      tipo: "APERTURA",
+      fecha,
+      hora: primero.fechaHora,
+    });
+
+    // ÚLTIMO DEL DÍA
+    clasificacion.set(ultimo.reporte, {
+      tipo: "CIERRE",
+      fecha,
+      hora: ultimo.fechaHora,
+    });
+  });
+
+  return clasificacion;
+};
+
+// ======================================================
+// DETECTAR DÍAS SIN APERTURA
+// ======================================================
+
+const detectarDiasSinApertura = (reportes, horaLimite = 14) => {
+  const dias = {};
+
+  reportes.forEach((reporte) => {
+    const fechaHora = obtenerFechaHoraReporte(reporte);
+
+    if (!fechaHora) return;
+
+    const fecha = fechaHora.toISOString().split("T")[0];
+
+    if (!dias[fecha]) {
+      dias[fecha] = [];
+    }
+
+    dias[fecha].push(fechaHora);
+  });
+
+  const resultado = {};
+
+  Object.entries(dias).forEach(([fecha, horas]) => {
+    const tieneReporteManana = horas.some(
+      (hora) => hora.getHours() < horaLimite
+    );
+
+    resultado[fecha] = !tieneReporteManana;
+  });
+
+  return resultado;
+};
 
 const generarExcel = (reportes) => {
   if (!centroSeleccionado.value?.ubicacion) {
@@ -447,6 +1192,21 @@ const generarExcel = (reportes) => {
 
   const wb = XLSX.utils.book_new();
 
+  // ======================================================
+  // CLASIFICACIÓN DE REPORTES
+  // ======================================================
+
+  const clasificacion = clasificarReportes(reportes);
+
+  const diasSinApertura = detectarDiasSinApertura(
+    reportes,
+    12 // Antes de las 12:00 se considera mañana
+  );
+
+  // ======================================================
+  // ARRAYS
+  // ======================================================
+
   const resumen = [];
   const lineas = [];
   const calibraciones = [];
@@ -454,25 +1214,365 @@ const generarExcel = (reportes) => {
   const gasesUso = [];
   const imagenes = [];
 
+  // ======================================================
+  // TRANSFORMAR INFORMACIÓN
+  // ======================================================
+
   reportes.forEach((r) => {
-    resumen.push(transformarResumen(r));
-    lineas.push(...transformarLineas(r));
-    calibraciones.push(...transformarCalibraciones(r));
-    gasesStock.push(...transformarGases(r, "stock"));
-    gasesUso.push(...transformarGases(r, "uso"));
-    imagenes.push(...transformarImagenes(r));
+    const infoClasificacion = clasificacion.get(r);
+
+    const fechaHora = obtenerFechaHoraReporte(r);
+
+    const fecha = infoClasificacion?.fecha || "";
+    const hora = fechaHora
+      ? obtenerHoraLocal(fechaHora)
+      : "";
+
+    let tipoReporte = infoClasificacion?.tipo || "SIN CLASIFICAR";
+
+    // --------------------------------------------------
+    // Información común
+    // --------------------------------------------------
+
+    const infoReporte = {
+      "Tipo de Reporte": tipoReporte,
+      "Fecha Reporte": fecha,
+      "Hora Reporte": hora,
+    };
+
+    // --------------------------------------------------
+    // RESUMEN
+    // --------------------------------------------------
+
+    resumen.push({
+      ...infoReporte,
+      ...transformarResumen(r),
+    });
+
+    // --------------------------------------------------
+    // LÍNEAS
+    // --------------------------------------------------
+
+    const datosLineas = transformarLineas(r);
+
+    datosLineas.forEach((item) => {
+      lineas.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // --------------------------------------------------
+    // CALIBRACIONES
+    // --------------------------------------------------
+
+    const datosCalibraciones = transformarCalibraciones(r);
+
+    datosCalibraciones.forEach((item) => {
+      calibraciones.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // --------------------------------------------------
+    // GASES STOCK
+    // --------------------------------------------------
+
+    const datosGasesStock = transformarGases(r, "stock");
+
+    datosGasesStock.forEach((item) => {
+      gasesStock.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // --------------------------------------------------
+    // GASES USO
+    // --------------------------------------------------
+
+    const datosGasesUso = transformarGases(r, "uso");
+
+    datosGasesUso.forEach((item) => {
+      gasesUso.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
+
+    // --------------------------------------------------
+    // IMÁGENES
+    // --------------------------------------------------
+
+    const datosImagenes = transformarImagenes(r);
+
+    datosImagenes.forEach((item) => {
+      imagenes.push({
+        ...infoReporte,
+        ...item,
+      });
+    });
   });
 
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), "Resumen");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lineas), "Líneas");
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.json_to_sheet(calibraciones),
-    "Calibraciones"
+  // ======================================================
+  // FUNCIÓN PARA CREAR HOJAS CON ESTILO
+  // ======================================================
+
+  const crearHoja = (datos, nombreHoja) => {
+    const ws = XLSX.utils.json_to_sheet(datos);
+
+    // --------------------------------------------------
+    // ENCABEZADO
+    // --------------------------------------------------
+
+    const rango = XLSX.utils.decode_range(ws["!ref"]);
+
+    for (let C = rango.s.c; C <= rango.e.c; C++) {
+      const celda = ws[XLSX.utils.encode_cell({
+        r: 0,
+        c: C,
+      })];
+
+      if (!celda) continue;
+
+      celda.s = {
+        font: {
+          bold: true,
+          color: "FFFFFF",
+          sz: 11,
+        },
+        fill: {
+          fgColor: {
+            rgb: "1F4E78",
+          },
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+        border: {
+          top: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+          bottom: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+          left: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+          right: {
+            style: "thin",
+            color: {
+              rgb: "D9E2F3",
+            },
+          },
+        },
+      };
+    }
+
+    // --------------------------------------------------
+    // ESTILO DE FILAS
+    // --------------------------------------------------
+
+    for (let R = 1; R <= rango.e.r; R++) {
+      const celdaTipo = ws[
+        XLSX.utils.encode_cell({
+          r: R,
+          c: 0,
+        })
+      ];
+
+      const tipo = celdaTipo?.v;
+
+      let estiloFila = {
+        alignment: {
+          vertical: "center",
+          wrapText: true,
+        },
+        border: {
+          bottom: {
+            style: "thin",
+            color: {
+              rgb: "E6E6E6",
+            },
+          },
+        },
+      };
+
+      // APERTURA
+      if (tipo === "APERTURA") {
+        estiloFila.fill = {
+          fgColor: {
+            rgb: "E2F0D9",
+          },
+        };
+
+        estiloFila.font = {
+          bold: true,
+          color: "375623",
+        };
+      }
+
+      // CIERRE
+      else if (tipo === "CIERRE") {
+        estiloFila.fill = {
+          fgColor: {
+            rgb: "DDEBF7",
+          },
+        };
+
+        estiloFila.font = {
+          bold: true,
+          color: "1F4E78",
+        };
+      }
+
+      // APERTURA Y CIERRE
+      else if (tipo === "APERTURA Y CIERRE") {
+        estiloFila.fill = {
+          fgColor: {
+            rgb: "FFF2CC",
+          },
+        };
+
+        estiloFila.font = {
+          bold: true,
+          color: "7F6000",
+        };
+      }
+
+      // SIN CLASIFICAR
+      else {
+        estiloFila.fill = {
+          fgColor: {
+            rgb: "FFFFFF",
+          },
+        };
+      }
+
+      for (let C = rango.s.c; C <= rango.e.c; C++) {
+        const celda = ws[
+          XLSX.utils.encode_cell({
+            r: R,
+            c: C,
+          })
+        ];
+
+        if (celda) {
+          celda.s = estiloFila;
+        }
+      }
+    }
+
+    // --------------------------------------------------
+    // ANCHOS DE COLUMNAS
+    // --------------------------------------------------
+
+    const anchos = [];
+
+    for (let C = rango.s.c; C <= rango.e.c; C++) {
+      let maxLength = 10;
+
+      for (let R = rango.s.r; R <= rango.e.r; R++) {
+        const celda = ws[
+          XLSX.utils.encode_cell({
+            r: R,
+            c: C,
+          })
+        ];
+
+        if (celda?.v !== undefined && celda?.v !== null) {
+          const longitud = String(celda.v).length;
+
+          if (longitud > maxLength) {
+            maxLength = longitud;
+          }
+        }
+      }
+
+      anchos.push({
+        wch: Math.min(maxLength + 2, 40),
+      });
+    }
+
+    ws["!cols"] = anchos;
+
+    // --------------------------------------------------
+    // CONGELAR ENCABEZADO
+    // --------------------------------------------------
+
+    ws["!freeze"] = {
+      xSplit: 0,
+      ySplit: 1,
+    };
+
+    // --------------------------------------------------
+    // FILTRO
+    // --------------------------------------------------
+
+    ws["!autofilter"] = {
+      ref: XLSX.utils.encode_range(rango),
+    };
+
+    // --------------------------------------------------
+    // ALTURA DEL ENCABEZADO
+    // --------------------------------------------------
+
+    ws["!rows"] = [
+      {
+        hpt: 30,
+      },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+  };
+
+  // ======================================================
+  // CREAR HOJAS
+  // ======================================================
+
+  crearHoja(resumen, "Resumen");
+  crearHoja(lineas, "Líneas");
+  crearHoja(calibraciones, "Calibraciones");
+  crearHoja(gasesStock, "Gases Stock");
+  crearHoja(gasesUso, "Gases Uso");
+  crearHoja(imagenes, "Imágenes");
+
+  // ======================================================
+  // HOJA EXTRA: CONTROL DE APERTURAS
+  // ======================================================
+
+  const controlAperturas = [];
+
+  Object.entries(diasSinApertura).forEach(
+    ([fecha, sinApertura]) => {
+      controlAperturas.push({
+        Fecha: fecha,
+        "Estado Apertura": sinApertura
+          ? "SIN REPORTE DE APERTURA"
+          : "APERTURA REGISTRADA",
+      });
+    }
   );
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gasesStock), "Gases Stock");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gasesUso), "Gases Uso");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(imagenes), "Imágenes");
+
+  if (controlAperturas.length > 0) {
+    crearHoja(controlAperturas, "Control Aperturas");
+  }
+
+  // ======================================================
+  // GENERAR ARCHIVO
+  // ======================================================
 
   XLSX.writeFile(wb, fileName);
 };
@@ -532,7 +1632,9 @@ const transformarGases = (r, tipo) => {
   return filas;
 };
 const transformarImagenes = (r) => {
-  return (r.imagenes || []).map((url) => ({
+  const imagenes = Array.isArray(r.imagenes) ? r.imagenes : [];
+
+  return imagenes.map((url) => ({
     Fecha: dayjs(r.fecha).format("YYYY-MM-DD"),
     URL: url,
   }));
